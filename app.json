@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "CleanOS",
+    "slug": "cleanos-android",
+    "version": "1.0.0",
+    "scheme": "cleanos",
+    "platforms": [
+      "android"
+    ],
+    "orientation": "portrait",
+    "icon": "./assets/cleanos-icon.png",
+    "userInterfaceStyle": "light",
+    "android": {
+      "package": "in.auratradings.cleanos",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "backgroundColor": "#102D3D",
+        "foregroundImage": "./assets/cleanos-adaptive.png",
+        "monochromeImage": "./assets/cleanos-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": true
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font"
+    ]
+  }
+}
