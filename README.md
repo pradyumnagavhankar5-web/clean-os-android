@@ -8,69 +8,66 @@ An Android-only housekeeping prototype built with Expo SDK 58, React Native,
 TypeScript and Expo Router. It runs in a compatible Expo Go app without Android
 Studio, a laptop, API keys or a paid service.
 
-## What works
-
-- Welcome screen and clearly labelled demo role selection.
-- A dashboard calculated from saved tasks and inventory, including today's
-  completion percentage and low-stock warnings.
-- Facilities and cleaning areas, with links to their tasks.
-- Create, edit and assign tasks; set dates and priorities; search and filter by
-  status, priority, date and area. Complete checklists before completing a task.
-- Inventory search and category filters, stock receipts/issues, movement history
-  and editable low-stock thresholds. Stock cannot go below zero.
-- A WhatsApp reorder enquiry with selectable products, editable quantities and a
-  message preview. You choose a verified recipient in WhatsApp and send it there.
-  No business phone number is hardcoded; opening the enquiry does not place an order.
-- Profile, role switching, explicit demo reset, and loading/error/empty states.
-
-Demo facilities include an office, housing society and clinic in Pune. The initial
-catalogue contains tissues, floor cleaner, toilet cleaner, handwash, dishwash,
-garbage bags and gloves. Prices are illustrative INR values, not supplier quotes.
-Dates use Indian formats and Asia/Kolkata. Enter task dates as **DD/MM/YYYY**.
+**GitHub shows the project's source code and instructions.** To use the Android
+app, open it in **Expo Go** or install a **preview APK** built from this source.
+The local demo needs no Supabase connection, account or secret keys. Supabase is
+an optional future integration.
 
 ## First preview from your Android phone
 
-Use an active cloud workspace connected to this repository. Open its terminal, or
-ask Codex to run these commands from the repository folder containing
-`package.json` and keep the server running:
+1. Install **Expo Go for SDK 58**. If the Play Store version does not yet support
+   SDK 58, get the matching Android build from the
+   [official Expo download page](https://expo.dev/go?device=true&platform=android&sdkVersion=58).
+   A verified official [Expo Go 58.0.5 Android APK](https://github.com/expo/expo-go-releases/releases/download/Expo-Go-58.0.5/Expo-Go-58.0.5.apk)
+   is also available. This installs Expo Go; open CleanOS with the server link below.
+2. In an active cloud workspace connected to this repository, open its terminal
+   or ask Codex to run the following from the folder containing `package.json`:
 
-```sh
-npm ci
-npm run start:tunnel
-```
+   ```sh
+   npm ci
+   npm run start:tunnel
+   ```
 
-The workspace needs Node.js and npm; Node 24 is suitable. `npm ci` installs the
-exact dependency versions in `package-lock.json`.
-
-1. Install **Expo Go** from the Google Play Store and use a version compatible
-   with Expo SDK 58.
-2. Wait for Expo to display the tunnel URL and QR code in the cloud terminal.
-3. On the same phone, copy the complete `exp://...` URL into Expo Go's URL entry,
+3. Wait for the terminal to report that the tunnel is ready and display an
+   `exp://...` URL. On the same phone, copy that complete URL into Expo Go's URL entry,
    if available, or tap an Expo Go link provided by the terminal. You cannot scan a
    QR code displayed on your own phone with that phone's camera. If using another
    screen, scan the QR code instead.
 4. Keep the cloud workspace and development server running while you preview.
    Stop the server later with **Ctrl+C** in its terminal.
 
-The tunnel script explicitly selects ngrok and Expo Go. It avoids the Expo-account
-requirement of SDK 58's default signed tunnel. The ngrok helper is included as a
-development dependency. If the CLI requests it after a partial installation,
-stop it and reinstall it in the project:
+Node 24 is suitable for the cloud workspace. `npm ci` installs the locked package
+versions. The tunnel script selects ngrok and Expo Go; its helper is included.
 
-```sh
-npx expo install --dev @expo/ngrok
-npm run start:tunnel
-```
+**Preview availability:** a link works only while a reachable server is running.
+The earlier ngrok attempt in this Codex workspace timed out; no live preview URL
+or APK is supplied here. Cloud sessions may stop serving when a task ends. If
+your host cannot maintain a tunnel, use a persistent browser workspace such as
+GitHub Codespaces within its available free quota, or build the
+[optional preview APK](#optional-android-builds-later). These paths work without
+a laptop or Android Studio.
 
-Tunnel connectivity depends on the cloud host, network and ngrok availability.
-Some Codex Cloud sessions do not keep a server accessible after the task ends. A
-finished Codex task is not permanent app hosting. If your workspace cannot keep
-the tunnel alive, use a browser-based persistent development workspace such as
-GitHub Codespaces, within its available free quota, or make the optional preview
-APK described below. Neither option requires Android Studio or a laptop.
+If a specific step fails, use the matching entry in the
+[troubleshooting guide](docs/TROUBLESHOOTING.md). That guide lists possible
+symptoms and recovery steps; it is not a list of confirmed app defects.
 
-**Your next action:** open this repository in an active cloud workspace, run
-`npm ci` followed by `npm run start:tunnel`, then open its `exp://` link in Expo Go.
+## What the demo includes
+
+- Demo role selection, facilities and cleaning areas, and a dashboard calculated
+  from saved tasks and stock.
+- Create, edit, assign, search and filter tasks; follow checklists and complete
+  work. Staff can update their own assigned work.
+- Search/filter inventory, record stock receipts and issues, inspect movement
+  history and configure low-stock thresholds. Stock cannot go below zero.
+- Prepare an editable WhatsApp enquiry with a message preview. You choose a
+  verified recipient and send it in WhatsApp; no phone number is hardcoded and
+  opening the enquiry does not place an order.
+- Profile, role switching, explicit demo reset and loading/error/empty states.
+
+Sample facilities cover an office, housing society and clinic in Pune. Supplies
+include tissues, floor cleaner, toilet cleaner, handwash, dishwash, garbage bags
+and gloves. INR prices are illustrative. Dates follow Asia/Kolkata; enter task
+dates as **DD/MM/YYYY**.
 
 ## Try the complete demo
 
@@ -80,8 +77,9 @@ APK described below. Neither option requires Android Studio or a laptop.
 3. Open the task, tap **Start task**, check its steps, then **Complete task**.
    Return to the dashboard to see the totals update. Use **Edit** to change its
    assignment, priority or other details.
-4. Open the **Stock** tab (Inventory). Search for floor cleaner, record **Stock in** or **Stock
-   out**, and check the movement history. Set **Edit threshold** equal to the
+4. Open the **Stock** tab (Inventory). Search for floor cleaner, record
+   **Stock in** or **Stock out**, and check the movement history. Set
+   **Edit threshold** equal to the
    available quantity: the item should show **Low stock**.
 5. Tap **Prepare reorder enquiry**, adjust products and quantities, review the
    preview, then tap **Open WhatsApp enquiry**. Choose your verified supplier
@@ -131,6 +129,10 @@ In a cloud environment using an HTTP proxy, Node 24 may need
 `NODE_USE_ENV_PROXY=1 npx expo-doctor` for those online checks.
 See [docs/VALIDATION.md](docs/VALIDATION.md) for checks actually completed and the
 remaining device verification.
+
+Source commit `d99a4d7` passed [GitHub Actions run 41226315517](https://github.com/pradyumnagavhankar5-web/clean-os-android/actions/runs/41226315517),
+including installation, lint, TypeScript, automated tests and Android JavaScript
+export. This historical CI result does not replace physical Android testing.
 
 ## Optional Android builds later
 
@@ -195,24 +197,5 @@ still needs database migrations, real authentication, organisation membership,
 server-enforced row-level security, atomic stock transactions and sync/conflict
 handling. Do not put privileged backend keys in the app.
 
-## Troubleshooting
-
-- **Expo Go says the SDK is unsupported:** update Expo Go and confirm it supports
-  SDK 58. Follow Expo's compatibility guidance if the Play Store build is not yet
-  compatible; use an EAS preview APK if needed.
-- **Phone cannot connect:** use the tunnel URL, not a cloud machine's private LAN
-  address. Check both devices' internet access, keep the server active, and retry
-  `npm run start:tunnel`. A tunnel cannot be guaranteed on every cloud host.
-- **Stale JavaScript after a change:** stop the server and run
-  `npm run start:tunnel -- --clear`.
-- **Saved demo cannot load:** try **Retry loading**. If you accept losing local
-  demo changes, use **Replace with fresh demo** and confirm. Do not clear storage
-  just to fix a connection problem.
-- **A save fails:** free device storage and retry. The app keeps the last
-  successfully saved state.
-- **WhatsApp does not open:** install WhatsApp or use a compatible browser. The
-  enquiry uses a recipient-free `https://wa.me/?text=...` URL.
-- **GitHub CLI authentication fails:** CLI credentials and the connected GitHub
-  integration can have different access. Use the workspace's connected GitHub
-  integration or configure CLI access through your account settings. Do not paste
-  passwords or tokens into the app or commit them.
+For a specific setup or app symptom, see
+[conditional troubleshooting steps](docs/TROUBLESHOOTING.md).
