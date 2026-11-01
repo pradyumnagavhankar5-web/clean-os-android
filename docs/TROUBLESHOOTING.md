@@ -7,12 +7,38 @@ Recorded test results and actual limitations are in [VALIDATION.md](VALIDATION.m
 ## I see files or instructions on GitHub
 
 That is the source repository. GitHub displays the code and README; to open
-CleanOS, use Expo Go with the link from a running development server, or install
-a preview APK. Follow [First preview from your Android phone](../README.md#first-preview-from-your-android-phone).
+CleanOS, install the [Android preview APK](../README.md#install-the-android-preview-apk).
+Expo Go with a running development server is an optional development route.
 
 The current prototype saves demo data on your device. It does not need Supabase,
 a real login account or backend keys. Connecting Supabase is future work, not a
 step required to make this demo run.
+
+## I cannot find the CleanOS APK download
+
+Open [Releases](https://github.com/pradyumnagavhankar5-web/clean-os-android/releases)
+and look under the newest preview release's **Assets** for
+**`CleanOS-preview.apk`**. The source ZIP shown by GitHub is project code, not an
+Android installer.
+
+A preview release is created only after the
+[Android preview workflow](https://github.com/pradyumnagavhankar5-web/clean-os-android/actions/workflows/android-preview.yml)
+builds and verifies the APK successfully. If the run is queued, running or failed,
+that run has not produced a published download. The workflow also saves a build
+artifact containing the APK; downloading an Actions artifact may require GitHub
+sign-in.
+
+## Expo says device verification has already been denied
+
+That sign-in request cannot be approved again by reusing the same code. The
+message does not establish why it was denied. Repeatedly reopening that request
+will not complete the connection.
+
+Use the [standalone Android preview APK](../README.md#install-the-android-preview-apk)
+to run CleanOS without Expo sign-in, Expo Go or a running preview server. If you
+later choose the Expo development route, start a new login request and follow its
+current browser instructions; a numeric pairing check may be required. Do not
+guess pairing numbers or share your password in the project or chat.
 
 ## Expo Go explicitly reports an unsupported SDK
 
@@ -36,7 +62,7 @@ cloud workspace requires it, prefix the command with `NODE_USE_ENV_PROXY=1`.
 This retrieves a download URL and adds no project dependency. It does not require
 Android Studio or an EAS build.
 
-Alternatively, build the [preview APK](../README.md#optional-android-builds-later),
+Alternatively, install the [preview APK](../README.md#install-the-android-preview-apk),
 which is a separately installed Android app and does not need Expo Go.
 
 ## The phone cannot reach the preview
@@ -49,7 +75,8 @@ which is a separately installed Android app and does not need Expo Go.
    tap an Expo Go link exposed by the terminal.
 3. Stop the old server and retry `npm run start:tunnel` from the repository folder.
 4. If the cloud host/ngrok cannot establish a tunnel, use a persistent supported
-   workspace or the optional preview APK. No tunnel is guaranteed on every host.
+   workspace or the [Android preview APK](../README.md#install-the-android-preview-apk).
+   No tunnel is guaranteed on every host.
 
 The earlier attempt in this Codex workspace timed out; the repository does not
 currently provide a live preview URL. This is separate from JavaScript checks

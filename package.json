@@ -1,7 +1,9 @@
 {
   "name": "cleanos-android",
   "version": "1.0.0",
-  "engines": { "node": "^22.13.0 || ^24.3.0 || ^26.0.0 || >=27.0.0" },
+  "engines": {
+    "node": "^22.13.0 || ^24.3.0 || ^26.0.0 || >=27.0.0"
+  },
   "main": "expo-router/entry",
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
@@ -12,6 +14,7 @@
     "expo-linking": "~58.0.15",
     "expo-router": "~58.0.29",
     "expo-status-bar": "~58.0.4",
+    "expo-system-ui": "~58.0.7",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-native": "0.88.1",

@@ -5,15 +5,48 @@
 Source repository: [pradyumnagavhankar5-web/clean-os-android](https://github.com/pradyumnagavhankar5-web/clean-os-android).
 
 An Android-only housekeeping prototype built with Expo SDK 58, React Native,
-TypeScript and Expo Router. It runs in a compatible Expo Go app without Android
-Studio, a laptop, API keys or a paid service.
+TypeScript and Expo Router. The standalone preview APK runs on your phone without
+Expo Go, an Expo account or a running development server. You do not need Android
+Studio, a laptop or API keys to install it.
 
 **GitHub shows the project's source code and instructions.** To use the Android
-app, open it in **Expo Go** or install a **preview APK** built from this source.
+app, install the **preview APK** below. Expo Go is an optional development route.
 The local demo needs no Supabase connection, account or secret keys. Supabase is
 an optional future integration.
 
+## Install the Android preview APK
+
+1. On your phone, open the repository's
+   [Android preview downloads](https://github.com/pradyumnagavhankar5-web/clean-os-android/releases).
+2. Open the newest preview release, expand **Assets** if needed, and download
+   **`CleanOS-preview.apk`**.
+3. Open the APK from your phone's **Downloads**. If Android asks, allow that
+   browser or Files app to install it, then tap **Install**.
+4. Launch **CleanOS**, tap **Explore the demo**, and choose a demo role.
+
+The download appears only after the
+[Android preview workflow](https://github.com/pradyumnagavhankar5-web/clean-os-android/actions/workflows/android-preview.yml)
+finishes successfully. If there is no preview asset yet, check that workflow's
+latest run; a build in progress is not an available APK.
+
+This workflow uses GitHub Actions for this public repository and requires no Expo
+or EAS credentials. It also saves the APK as a workflow artifact. Repository or
+account restrictions can affect Actions availability.
+
+The APK bundles the app code, so you can open the local demo without a preview
+server. WhatsApp enquiries still require a compatible app or browser and internet
+access. Demo data stays on the device and does not sync.
+
+**Preview signing:** this build uses the generated Android template's debug
+signing certificate for testing with sample information. It is not a production
+signing identity or a Google Play release. Production distribution requires your
+own signing key and release preparation. Physical phone testing is recorded
+separately in [the Android checklist](docs/ANDROID_TEST_CHECKLIST.md).
+
 ## First preview from your Android phone
+
+This optional route is for developing with Expo Go. For a simple installed demo,
+use the [Android preview APK](#install-the-android-preview-apk) above.
 
 1. Install **Expo Go for SDK 58**. If the Play Store version does not yet support
    SDK 58, get the matching Android build from the
@@ -40,11 +73,11 @@ Node 24 is suitable for the cloud workspace. `npm ci` installs the locked packag
 versions. The tunnel script selects ngrok and Expo Go; its helper is included.
 
 **Preview availability:** a link works only while a reachable server is running.
-The earlier ngrok attempt in this Codex workspace timed out; no live preview URL
-or APK is supplied here. Cloud sessions may stop serving when a task ends. If
+The earlier ngrok attempts in this Codex workspace failed; no live Expo Go preview
+URL is provided here. Cloud sessions may stop serving when a task ends. If
 your host cannot maintain a tunnel, use a persistent browser workspace such as
-GitHub Codespaces within its available free quota, or build the
-[optional preview APK](#optional-android-builds-later). These paths work without
+GitHub Codespaces within its available free quota, or install the
+[Android preview APK](#install-the-android-preview-apk). These paths work without
 a laptop or Android Studio.
 
 If a specific step fails, use the matching entry in the
@@ -135,6 +168,10 @@ including installation, lint, TypeScript, automated tests and Android JavaScript
 export. This historical CI result does not replace physical Android testing.
 
 ## Optional Android builds later
+
+The [GitHub Actions preview](#install-the-android-preview-apk) above is the route
+that avoids Expo sign-in. The commands in this section are an optional EAS route
+for later development and production build work.
 
 The included `eas.json` defines preview APK, development-client APK and production
 AAB profiles. These are cloud builds; no Android Studio is needed. An Expo account

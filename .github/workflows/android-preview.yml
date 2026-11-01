@@ -1,0 +1,166 @@
+name: Build Android preview APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'assets/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'app.json'
+      - 'app.config.*'
+      - 'babel.config.*'
+      - 'metro.config.*'
+      - 'tsconfig.json'
+      - '.github/workflows/android-preview.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-preview-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.repository == 'pradyumnagavhankar5-web/clean-os-android' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      CI: '1'
+      EXPO_NO_TELEMETRY: '1'
+      NODE_OPTIONS: --max-old-space-size=4096
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Check TypeScript, lint and tests
+        run: npm run check
+
+      - name: Generate the Android project
+        run: npx expo prebuild --platform android --no-install
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: gradle
+          cache-dependency-path: |
+            android/gradle/wrapper/gradle-wrapper.properties
+            android/gradle.properties
+            package-lock.json
+
+      - name: Install Android build tools
+        uses: android-actions/setup-android@v4
+        with:
+          packages: 'platform-tools platforms;android-37 build-tools;37.0.0 ndk;27.1.12297006 cmake;3.30.5'
+          log-accepted-android-sdk-licenses: false
+
+      - name: Build the standalone preview
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          # The generated Expo template signs this release variant with its
+          # generic debug key. It embeds the JS bundle and needs no Metro server.
+          ./gradlew :app:assembleRelease --no-daemon --max-workers=2 \
+            -Dorg.gradle.jvmargs='-Xmx4096m -XX:MaxMetaspaceSize=1024m -Dfile.encoding=UTF-8' \
+            -Pandroid.cmakeVersion=3.30.5
+
+      - name: Verify and package the APK
+        run: |
+          mkdir -p artifacts
+          cp android/app/build/outputs/apk/release/app-release.apk artifacts/CleanOS-preview.apk
+          build_tools="${ANDROID_HOME}/build-tools/37.0.0"
+          "$build_tools/apksigner" verify --verbose --print-certs artifacts/CleanOS-preview.apk \
+            > artifacts/APK-signature.txt
+          "$build_tools/aapt2" dump badging artifacts/CleanOS-preview.apk \
+            > artifacts/APK-manifest.txt
+          python - <<'PY'
+          import os
+          import re
+          import zipfile
+          from pathlib import Path
+
+          manifest = Path('artifacts/APK-manifest.txt').read_text()
+          package = re.search(r"^package: name='([^']+)'", manifest, re.MULTILINE)
+          if not package or package.group(1) != 'in.auratradings.cleanos':
+              raise SystemExit('APK package does not match CleanOS.')
+          with zipfile.ZipFile('artifacts/CleanOS-preview.apk') as apk:
+              if not apk.read('assets/index.android.bundle'):
+                  raise SystemExit('The APK has no embedded JavaScript bundle.')
+              abis = sorted({name.split('/')[1] for name in apk.namelist()
+                             if name.startswith('lib/') and name.count('/') >= 2})
+          if not {'arm64-v8a', 'armeabi-v7a'}.issubset(abis):
+              raise SystemExit(f'Expected Android phone architectures are missing: {abis}')
+          Path('artifacts/BUILD-INFO.txt').write_text(
+              'CleanOS standalone Android preview\n'
+              f"Source commit: {os.environ['GITHUB_SHA']}\n"
+              f"Included architectures: {', '.join(abis)}\n"
+              'JavaScript bundle: embedded\n'
+              'Signature: Expo template generic debug key, verified with apksigner\n'
+              'Physical Android device testing: not performed by this workflow\n'
+          )
+          print(f"Verified signed CleanOS APK with embedded JavaScript; architectures: {', '.join(abis)}")
+          PY
+          (cd artifacts && sha256sum CleanOS-preview.apk > CleanOS-preview.apk.sha256)
+
+      - name: Save verified APK and build evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: cleanos-android-preview-${{ github.run_number }}-${{ github.run_attempt }}
+          path: artifacts/
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Download the verified build
+        uses: actions/download-artifact@v4
+        with:
+          name: cleanos-android-preview-${{ github.run_number }}-${{ github.run_attempt }}
+          path: artifacts
+
+      - name: Publish the preview download
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          (cd artifacts && sha256sum --check CleanOS-preview.apk.sha256)
+          preview_tag="android-preview-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}-${GITHUB_SHA:0:7}"
+          cat > release-notes.md <<EOF
+          Install **CleanOS-preview.apk** on your Android phone. Android may ask you to allow installation from the browser.
+
+          This is a standalone local demo. Expo Go, an Expo account, a development server and a backend connection are not needed to use it.
+
+          The APK uses the Expo template's generic debug signing key and is intended for preview testing. It is not a Play Store production release.
+
+          Source commit: ${GITHUB_SHA}
+          Automated checks and APK signature/bundle validation passed. Physical Android device testing has not been performed by this workflow.
+          EOF
+          gh release create "$preview_tag" \
+            artifacts/CleanOS-preview.apk \
+            artifacts/CleanOS-preview.apk.sha256 \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "CleanOS Android preview ${preview_tag}" \
+            --prerelease \
+            --notes-file release-notes.md
+          download_url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${preview_tag}/CleanOS-preview.apk"
+          printf '### CleanOS Android preview\n\n[Download the APK](%s)\n\nSource: `%s`\n' \
+            "$download_url" "$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
