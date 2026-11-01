@@ -82,14 +82,15 @@ jobs:
                             (official / 'source.properties').read_text().splitlines()
                             if '=' in line and not line.lstrip().startswith('#'))
           properties = {key.strip(): value.strip() for key, value in properties.items()}
-          if properties.get('AndroidVersion.ApiLevel') != '37' or not (official / 'android.jar').is_file():
+          api_level = properties.get('AndroidVersion.ApiLevel')
+          if api_level not in {'37', '37.0'} or not (official / 'android.jar').is_file():
               raise SystemExit('The installed platform is not the official Android API 37 SDK.')
           compatible = platforms / 'android-37'
           if not compatible.exists():
               compatible.symlink_to(official.name, target_is_directory=True)
           if not (compatible / 'android.jar').is_file():
               raise SystemExit('Gradle cannot resolve the Android API 37 SDK.')
-          print('Official API 37.0 SDK installed; Gradle API 37 path is available.')
+          print(f'Official API {api_level} SDK installed; Gradle API 37 path is available.')
           PY
 
       - name: Build the standalone preview
