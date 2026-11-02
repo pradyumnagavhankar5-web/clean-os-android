@@ -1,4 +1,4 @@
-import React, { type ComponentProps, type ReactNode } from 'react';
+import React, { useState, type ComponentProps, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -23,14 +23,14 @@ export const colors = {
   navy: '#102D3D',
   teal: '#087F76',
   tealDark: '#06685F',
-  tealLight: '#E5F4F1',
+  tealLight: '#E8F5F2',
   white: '#FFFFFF',
-  background: '#F4F7F8',
-  bg: '#F4F7F8',
+  background: '#F3F6F9',
+  bg: '#F3F6F9',
   surface: '#FFFFFF',
   text: '#102D3D',
-  muted: '#536C79',
-  border: '#DEE7EA',
+  muted: '#526877',
+  border: '#E1E8EE',
   success: '#14714C',
   successLight: '#E7F5EC',
   warning: '#8B5700',
@@ -142,7 +142,7 @@ export function Chip({ label, selected = false, onPress, tone = 'neutral' }: {
       style={({ pressed }) => [
         styles.chip,
         styles.chipInteractive,
-        { backgroundColor: palette.background },
+        { backgroundColor: selected ? palette.background : colors.white, borderColor: selected ? colors.teal : colors.border },
         pressed && styles.pressed,
       ]}
     >{text}</Pressable>
@@ -163,6 +163,7 @@ export function Field({
   secureTextEntry?: boolean;
   editable?: boolean;
 }) {
+  const [focused, setFocused] = useState(false);
   return (
     <View style={styles.field}>
       <Text style={styles.fieldLabel}>{label}</Text>
@@ -177,9 +178,12 @@ export function Field({
         multiline={multiline}
         secureTextEntry={secureTextEntry}
         editable={editable}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
         style={[
           styles.input,
           multiline && styles.multilineInput,
+          focused && styles.inputFocused,
           error ? styles.inputError : null,
           !editable && styles.inputDisabled,
         ]}
@@ -232,9 +236,13 @@ export function Metric({ label, value, icon, tone = 'neutral' }: {
   const palette = toneColors[tone];
   return (
     <View style={styles.metric} accessible accessibilityLabel={`${label}: ${value}`}>
-      <IconBadge name={icon} color={tone === 'neutral' ? colors.teal : palette.foreground} background={tone === 'neutral' ? colors.tealLight : palette.background} />
+      <View style={styles.metricHeader}>
+        <Text style={styles.metricLabel}>{label}</Text>
+        <View style={[styles.metricIcon, { backgroundColor: tone === 'neutral' ? colors.tealLight : palette.background }]}>
+          <Ionicons name={icon} size={19} color={tone === 'neutral' ? colors.teal : palette.foreground} accessible={false} />
+        </View>
+      </View>
       <Text style={styles.metricValue}>{value}</Text>
-      <Text style={styles.metricLabel}>{label}</Text>
     </View>
   );
 }
@@ -255,6 +263,7 @@ export function ModalSheet({ visible, title, onClose, children }: {
           onPress={onClose}
         />
         <View style={styles.modalSheet} accessibilityViewIsModal>
+          <View style={styles.modalHandle} />
           <View style={styles.modalHeader}>
             <Text accessibilityRole="header" style={styles.modalTitle}>{title}</Text>
             <Pressable
@@ -295,51 +304,55 @@ export function Notice({ message, tone = 'info' }: {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   scrollContent: { flexGrow: 1, alignItems: 'center' },
-  screenContent: { width: '100%', maxWidth: 1000, alignSelf: 'center', padding: 20, paddingBottom: 36, gap: 20 },
-  header: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 12, paddingTop: 6, paddingBottom: 2 },
+  screenContent: { width: '100%', maxWidth: 1000, alignSelf: 'center', paddingHorizontal: 20, paddingTop: 24, paddingBottom: 40, gap: 22 },
+  header: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 12, paddingTop: 2, paddingBottom: 4 },
   headerCopy: { flex: 1, minWidth: 180, gap: 6 },
   headerAction: { flexShrink: 1 },
-  eyebrow: { color: colors.teal, fontSize: 12, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase' },
-  title: { color: colors.navy, fontSize: 29, fontWeight: '800', letterSpacing: -0.7 },
-  subtitle: { color: colors.muted, fontSize: 14, lineHeight: 21 },
-  card: { backgroundColor: colors.white, borderRadius: 20, padding: 18, borderWidth: 1, borderColor: colors.border, gap: 12 },
-  button: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 18, paddingVertical: 13, borderRadius: 13, gap: 9, borderWidth: 1, borderColor: 'transparent' },
+  eyebrow: { color: colors.tealDark, fontSize: 11, fontWeight: '700', letterSpacing: 1.6, textTransform: 'uppercase' },
+  title: { color: colors.navy, fontSize: 28, lineHeight: 36, fontWeight: '700', letterSpacing: -0.7 },
+  subtitle: { color: colors.muted, fontSize: 14, lineHeight: 22 },
+  card: { backgroundColor: colors.white, borderRadius: 18, padding: 18, borderWidth: 1, borderColor: colors.border, gap: 14, elevation: 1, shadowColor: '#183749', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 8 },
+  button: { minHeight: 50, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 18, paddingVertical: 13, borderRadius: 12, gap: 9, borderWidth: 1, borderColor: 'transparent' },
   buttonPrimary: { backgroundColor: colors.teal },
-  buttonSecondary: { backgroundColor: colors.white, borderColor: '#A8D1CA' },
+  buttonSecondary: { backgroundColor: colors.white, borderColor: '#BDD6D3' },
   buttonGhost: { backgroundColor: 'transparent' },
   buttonDanger: { backgroundColor: colors.danger },
   buttonLabel: { fontSize: 15, fontWeight: '700', textAlign: 'center', flexShrink: 1 },
-  pressed: { opacity: 0.72 },
+  pressed: { opacity: 0.78 },
   disabled: { opacity: 0.45 },
-  chip: { borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6, alignSelf: 'flex-start', justifyContent: 'center' },
-  chipInteractive: { minHeight: 48, paddingHorizontal: 15, paddingVertical: 11 },
-  chipLabel: { fontSize: 12, fontWeight: '700' },
-  field: { gap: 7 },
-  fieldLabel: { color: colors.navy, fontSize: 14, fontWeight: '600' },
-  input: { minHeight: 52, backgroundColor: colors.white, borderWidth: 1, borderColor: '#B9CAD1', borderRadius: 12, color: colors.navy, fontSize: 16, paddingVertical: 13, paddingHorizontal: 14 },
+  chip: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, alignSelf: 'flex-start', justifyContent: 'center', maxWidth: '100%' },
+  chipInteractive: { minHeight: 48, paddingHorizontal: 15, paddingVertical: 11, borderRadius: 12, borderWidth: 1 },
+  chipLabel: { fontSize: 12, fontWeight: '600', lineHeight: 18 },
+  field: { gap: 8 },
+  fieldLabel: { color: colors.navy, fontSize: 13, fontWeight: '600', lineHeight: 20 },
+  input: { minHeight: 54, backgroundColor: colors.white, borderWidth: 1, borderColor: '#C6D3DD', borderRadius: 12, color: colors.navy, fontSize: 16, lineHeight: 23, paddingVertical: 14, paddingHorizontal: 15 },
+  inputFocused: { borderColor: colors.teal, backgroundColor: '#FBFEFD' },
   multilineInput: { minHeight: 106 },
   inputError: { borderColor: colors.danger },
   inputDisabled: { backgroundColor: '#EDF2F4', color: colors.muted },
   fieldError: { color: colors.danger, fontSize: 13, lineHeight: 19 },
-  empty: { backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, borderRadius: 20, padding: 26, alignItems: 'center', gap: 10 },
-  emptyIcon: { width: 62, height: 62, borderRadius: 22, backgroundColor: colors.tealLight, justifyContent: 'center', alignItems: 'center', marginBottom: 4 },
+  empty: { backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, borderRadius: 18, paddingHorizontal: 24, paddingVertical: 32, alignItems: 'center', gap: 12 },
+  emptyIcon: { width: 60, height: 60, borderRadius: 18, backgroundColor: colors.tealLight, justifyContent: 'center', alignItems: 'center', marginBottom: 4 },
   emptyTitle: { color: colors.navy, fontSize: 18, fontWeight: '700', textAlign: 'center' },
   emptyMessage: { color: colors.muted, fontSize: 14, lineHeight: 22, textAlign: 'center', maxWidth: 380 },
-  emptyAction: { marginTop: 8 },
+  emptyAction: { marginTop: 8, maxWidth: '100%' },
   sectionTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 },
-  sectionTitle: { color: colors.navy, fontSize: 18, fontWeight: '700', flexShrink: 1 },
-  iconBadge: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  metric: { flex: 1, minWidth: 130, borderRadius: 18, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, padding: 16, gap: 9 },
-  metricValue: { color: colors.navy, fontSize: 27, fontWeight: '800', letterSpacing: -0.5 },
-  metricLabel: { color: colors.muted, fontSize: 13, lineHeight: 19 },
-  modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: '#102D3D88' },
+  sectionTitle: { color: colors.navy, fontSize: 17, lineHeight: 24, fontWeight: '700', letterSpacing: -0.2, flexShrink: 1 },
+  iconBadge: { width: 44, height: 44, flexShrink: 0, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  metric: { flex: 1, minWidth: 130, borderRadius: 16, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, padding: 16, gap: 13 },
+  metricHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  metricIcon: { width: 34, height: 34, flexShrink: 0, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  metricValue: { color: colors.navy, fontSize: 30, lineHeight: 38, fontWeight: '700', letterSpacing: -0.8 },
+  metricLabel: { color: colors.muted, fontSize: 12, fontWeight: '500', lineHeight: 18, flex: 1 },
+  modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: '#102D3D99' },
   modalBackdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
-  modalSheet: { maxHeight: '92%', width: '100%', maxWidth: 760, alignSelf: 'center', backgroundColor: colors.background, borderTopLeftRadius: 26, borderTopRightRadius: 26, overflow: 'hidden' },
-  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingLeft: 22, paddingRight: 12, paddingTop: 12, paddingBottom: 12, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border },
-  modalTitle: { color: colors.navy, fontSize: 20, fontWeight: '700', flex: 1 },
+  modalSheet: { maxHeight: '92%', width: '100%', maxWidth: 760, alignSelf: 'center', backgroundColor: colors.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, overflow: 'hidden' },
+  modalHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: '#D0DAE1', alignSelf: 'center', marginTop: 10 },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingLeft: 22, paddingRight: 12, paddingTop: 4, paddingBottom: 10, backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border },
+  modalTitle: { color: colors.navy, fontSize: 20, lineHeight: 28, letterSpacing: -0.3, fontWeight: '700', flex: 1 },
   closeButton: { minWidth: 48, minHeight: 48, alignItems: 'center', justifyContent: 'center', borderRadius: 24 },
-  modalContent: { padding: 22, paddingBottom: 32, gap: 18 },
-  notice: { borderRadius: 13, padding: 14, flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  modalContent: { padding: 22, paddingBottom: 36, gap: 20 },
+  notice: { borderRadius: 12, padding: 14, flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   noticeIcon: { marginTop: 1 },
   noticeText: { flex: 1, fontSize: 13, lineHeight: 21 },
 });

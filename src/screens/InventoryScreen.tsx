@@ -14,6 +14,7 @@ type StockDialog = { itemId: string; type: 'in' | 'out' } | null;
 type Feedback = { message: string; tone: 'success' | 'error' } | null;
 const errorMessage = (error: unknown) => error instanceof Error ? error.message : 'Please try again.';
 const quantityLabel = (value: number) => new Intl.NumberFormat('en-IN', { maximumFractionDigits: 3 }).format(value);
+const createMovementId = () => `stock-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
 export default function InventoryScreen() {
   const params = useLocalSearchParams<{ lowStock?: string }>();
@@ -64,7 +65,7 @@ export default function InventoryScreen() {
     setDialogError('');
     try {
       await act({ type: 'recordStock', movement: {
-        id: `stock-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+        id: createMovementId(),
         itemId: selectedItem.id, type: stockDialog.type, quantity: amount,
         note: note.trim(), createdAt: new Date().toISOString(),
       } });
@@ -118,16 +119,22 @@ export default function InventoryScreen() {
 
   return (
     <Screen>
-      <Header eyebrow="Supplies & consumables" title="Inventory" subtitle="Know what is on hand. Replenish before it runs out." />
+      <Header eyebrow="Supplies & consumables" title="Inventory" subtitle="Stock visibility for a well-supplied workspace." />
       <View style={styles.metrics}>
         <Metric icon="cube-outline" label="Products tracked" value={state.inventory.length} />
         <Metric icon="alert-circle-outline" label="Low-stock products" value={lowStock.length} tone={lowStock.length ? 'warning' : 'success'} />
       </View>
       {feedback ? <Notice message={feedback.message} tone={feedback.tone} /> : null}
-      {lowStock.length > 0 ? <Notice message={`${lowStock.length} product${lowStock.length > 1 ? 's are' : ' is'} at or below the reorder threshold.`} /> : null}
-      {manager ? <Button label="Prepare reorder enquiry" icon="logo-whatsapp" onPress={openReorder} />
+      {manager ? <Card style={styles.reorderCard}>
+        <View style={styles.row}>
+          <IconBadge name={lowStock.length ? 'alert-circle-outline' : 'bag-check-outline'} color={lowStock.length ? colors.warning : colors.teal} background={lowStock.length ? colors.warningLight : colors.tealLight} />
+          <View style={styles.grow}><Text style={styles.calloutTitle}>{lowStock.length ? 'Replenishment needed' : 'Plan your next order'}</Text><Text style={styles.secondary}>{lowStock.length ? `${lowStock.length} ${lowStock.length === 1 ? 'product has' : 'products have'} reached the reorder threshold.` : 'Prepare a supply enquiry with the products and quantities you need.'}</Text></View>
+        </View>
+        <Button label="Prepare reorder enquiry" icon="logo-whatsapp" onPress={openReorder} />
+      </Card>
         : <Notice message="Staff view: check stock availability here. Ask your supervisor to record supplies received or issued." />}
       <Card>
+        <Text style={styles.smallLabel}>FIND SUPPLIES</Text>
         <Field label="Search supplies" value={search} onChangeText={setSearch} placeholder="Try tissues, floor cleaner or handwash" />
         <View style={styles.chips}>
           {['All', 'Low stock'].map((option) => <Chip key={option} label={option} selected={activeFilter === option} onPress={() => { setFilter(option); router.setParams({lowStock:undefined}); }} />)}
@@ -137,22 +144,23 @@ export default function InventoryScreen() {
           {categories.map((option) => <Chip key={option} label={option} selected={category === option} onPress={() => setCategory(option)} />)}
         </View>
       </Card>
-      <SectionTitle title={`${visibleInventory.length} ${visibleInventory.length === 1 ? 'product' : 'products'}`} />
+      <SectionTitle title="Product catalogue" action={<Text style={styles.resultCount}>{visibleInventory.length} {visibleInventory.length === 1 ? 'product' : 'products'}</Text>} />
       {visibleInventory.length === 0 ? <EmptyState icon="search-outline" title="No supplies found" message="Try another search or clear the filters." action={<Button label="Clear filters" variant="secondary" onPress={() => { setSearch(''); setFilter('All'); setCategory('All categories'); router.setParams({lowStock:undefined}); }} />} /> : null}
       {visibleInventory.map((item) => {
         const low = item.quantity <= item.threshold;
-        return <Card key={item.id}>
+        return <Card key={item.id} style={low ? styles.lowStockCard : undefined}>
           <View style={styles.row}>
             <IconBadge name="cube-outline" color={low ? colors.warning : colors.teal} background={low ? colors.warningLight : colors.tealLight} />
             <View style={styles.grow}><Text style={styles.itemName}>{item.name}</Text><Text style={styles.secondary}>{item.category}</Text></View>
-            <Chip label={low ? 'Low stock' : 'In stock'} tone={low ? 'warning' : 'success'} />
+            <Chip label={item.quantity === 0 ? 'Out of stock' : low ? 'Low stock' : 'In stock'} tone={item.quantity === 0 ? 'danger' : low ? 'warning' : 'success'} />
           </View>
           <View style={styles.stockSummary}>
-            <View style={styles.grow}><Text style={styles.quantity}>{quantityLabel(item.quantity)} <Text style={styles.unit}>{item.unit}</Text></Text><Text style={styles.secondary}>Available stock</Text></View>
-            <View><Text style={styles.threshold}>≤ {quantityLabel(item.threshold)} {item.unit}</Text><Text style={styles.secondary}>Low-stock threshold</Text></View>
+            <View style={styles.grow}><Text style={styles.balanceLabel}>AVAILABLE STOCK</Text><Text style={styles.quantity}>{quantityLabel(item.quantity)} <Text style={styles.unit}>{item.unit}</Text></Text></View>
+            <View style={styles.thresholdSummary}><Text style={styles.secondary}>Reorder at</Text><Text style={styles.threshold}>≤ {quantityLabel(item.threshold)} {item.unit}</Text></View>
           </View>
           <Text style={styles.secondary}>Demo unit value: {formatINR(item.unitPrice)} / {item.unit}</Text>
           {manager ? <>
+            <View style={styles.divider} />
             <View style={styles.actions}>
               <Button label="Stock in" icon="add-outline" variant="secondary" style={styles.actionButton} disabled={busy} onPress={() => openStock(item, 'in')} accessibilityLabel={`Record stock received for ${item.name}`} />
               <Button label="Stock out" icon="remove-outline" variant="secondary" style={styles.actionButton} disabled={busy || item.quantity === 0} onPress={() => openStock(item, 'out')} accessibilityLabel={`Record stock issued for ${item.name}`} />
@@ -162,32 +170,31 @@ export default function InventoryScreen() {
         </Card>;
       })}
       <SectionTitle title="Stock movement history" />
-      <Text style={styles.secondary}>Most recent first · Dates and times use IST</Text>
+      <Text style={styles.historyCaption}>Receipts and issues · Most recent first · IST</Text>
       {movements.length === 0 ? <EmptyState icon="swap-vertical-outline" title="No stock movements yet" message="Record your first stock receipt or issue to start the history." /> :
-        movements.map((movement) => {
+        <Card style={styles.historyCard}>{movements.map((movement, index) => {
           const item = state.inventory.find((product) => product.id === movement.itemId);
           const isIn = movement.type === 'in';
           const time = new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' }).format(new Date(movement.createdAt));
-          return <Card key={movement.id}>
+          return <View key={movement.id} style={[styles.historyEntry, index > 0 && styles.historyDivider]}>
             <View style={styles.row}>
               <IconBadge name={isIn ? 'arrow-down-outline' : 'arrow-up-outline'} color={isIn ? colors.success : colors.warning} background={isIn ? colors.successLight : colors.warningLight} />
-              <View style={styles.grow}><Text style={styles.itemName}>{item?.name ?? 'Product'}</Text><Text style={styles.secondary}>{formatDate(movement.createdAt)} · {time}</Text></View>
+              <View style={styles.grow}><Text style={styles.itemName}>{item?.name ?? 'Product'}</Text><Text style={styles.secondary}>{isIn ? 'Received' : 'Issued'} · {formatDate(movement.createdAt)} · {time}</Text></View>
               <Text style={[styles.movementAmount, { color: isIn ? colors.success : colors.warning }]}>{isIn ? '+' : '−'}{quantityLabel(movement.quantity)} {item?.unit}</Text>
             </View>
-            <Text style={styles.secondary}>{movement.note || (isIn ? 'Stock received' : 'Stock issued')}</Text>
-          </Card>;
-        })}
+            <Text style={styles.movementNote}>{movement.note || (isIn ? 'Stock received' : 'Stock issued')}</Text>
+          </View>;
+        })}</Card>}
 
       <ModalSheet visible={!!stockDialog} title={stockDialog?.type === 'in' ? 'Receive stock' : 'Issue stock'} onClose={() => { if (!busy) setStockDialog(null); }}>
-        <Text style={styles.itemName}>{selectedItem?.name}</Text>
-        <Text style={styles.secondary}>Available: {selectedItem?.quantity} {selectedItem?.unit}</Text>
+        <Card style={styles.dialogSummary}><View style={styles.row}><IconBadge name={stockDialog?.type === 'in' ? 'arrow-down-outline' : 'arrow-up-outline'} /><View style={styles.grow}><Text style={styles.itemName}>{selectedItem?.name}</Text><Text style={styles.secondary}>Current balance: {selectedItem ? quantityLabel(selectedItem.quantity) : '—'} {selectedItem?.unit}</Text></View></View></Card>
         <Field label={`Quantity (${selectedItem?.unit ?? 'units'})`} value={quantity} onChangeText={setQuantity} keyboardType="decimal-pad" placeholder="Enter quantity" editable={!busy} />
         <Field label="Reason / reference" value={note} onChangeText={setNote} placeholder={stockDialog?.type === 'in' ? 'e.g. Supplier delivery, invoice AT-024' : 'e.g. Issued for lobby and washrooms'} multiline editable={!busy} />
         {dialogError ? <Notice tone="error" message={dialogError} /> : null}
-        <Button label="Save stock movement" loading={busy} onPress={() => { void saveStock(); }} />
+        <Button label={stockDialog?.type === 'in' ? 'Save stock receipt' : 'Save stock issue'} icon="checkmark-outline" loading={busy} onPress={() => { void saveStock(); }} />
       </ModalSheet>
       <ModalSheet visible={!!thresholdItem} title="Low-stock threshold" onClose={() => { if (!busy) setThresholdItem(null); }}>
-        <Text style={styles.itemName}>{thresholdItem?.name}</Text>
+        <Card style={styles.dialogSummary}><View style={styles.row}><IconBadge name="options-outline" /><View style={styles.grow}><Text style={styles.itemName}>{thresholdItem?.name}</Text><Text style={styles.secondary}>Replenishment settings</Text></View></View></Card>
         <Text style={styles.secondary}>A warning appears when available stock is equal to or below this quantity.</Text>
         <Field label={`Threshold (${thresholdItem?.unit ?? 'units'})`} value={threshold} onChangeText={setThreshold} keyboardType="decimal-pad" editable={!busy} />
         {dialogError ? <Notice tone="error" message={dialogError} /> : null}
@@ -195,12 +202,14 @@ export default function InventoryScreen() {
       </ModalSheet>
       <ModalSheet visible={reorderVisible} title="Reorder enquiry" onClose={() => { if (!openingWhatsApp) setReorderVisible(false); }}>
         <Text style={styles.secondary}>Choose products and edit the quantities. Low-stock products are selected for you.</Text>
+        <Text style={styles.smallLabel}>1 · SELECT PRODUCTS</Text>
         <View style={styles.chips}>
           {state.inventory.map((item) => <Chip key={item.id} label={item.name} selected={Object.hasOwn(reorderQuantities, item.id)} onPress={() => toggleReorderProduct(item)} />)}
         </View>
+        {reorderLines.length ? <Text style={styles.smallLabel}>2 · SET ORDER QUANTITIES</Text> : null}
         {state.inventory.filter((item) => Object.hasOwn(reorderQuantities, item.id)).map((item) =>
           <Field key={item.id} label={`${item.name} (${item.unit})`} value={reorderQuantities[item.id]} keyboardType="decimal-pad" onChangeText={(value) => setReorderQuantities((current) => ({ ...current, [item.id]: value }))} />)}
-        {preview ? <Card><Text style={styles.smallLabel}>MESSAGE PREVIEW</Text><Text selectable style={styles.preview}>{preview}</Text></Card>
+        {preview ? <Card style={styles.previewCard}><Text style={styles.smallLabel}>ENQUIRY PREVIEW</Text><Text selectable style={styles.preview}>{preview}</Text></Card>
           : <Notice message="Select at least one product and enter a quantity greater than zero for every selected product to preview the enquiry." />}
         <Notice message="Choose your verified supplier contact in WhatsApp. Review the message and tap Send there when ready." />
         {dialogError ? <Notice tone="error" message={dialogError} /> : null}
@@ -212,18 +221,32 @@ export default function InventoryScreen() {
 
 const styles = StyleSheet.create({
   metrics: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  reorderCard: { borderColor: '#C7DED9', backgroundColor: '#F0F8F6', gap: 16 },
+  calloutTitle: { color: colors.navy, fontSize: 16, fontWeight: '700', lineHeight: 23 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   row: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 12 },
   grow: { flex: 1, minWidth: 120, gap: 4 },
   itemName: { color: colors.navy, fontSize: 16, fontWeight: '700', lineHeight: 23 },
   secondary: { color: colors.muted, fontSize: 13, lineHeight: 20 },
-  smallLabel: { color: colors.muted, fontSize: 11, fontWeight: '700', letterSpacing: 1 },
-  stockSummary: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 16, borderRadius: 12, backgroundColor: colors.background, padding: 14 },
-  quantity: { color: colors.navy, fontSize: 27, fontWeight: '800' },
+  resultCount: { color: colors.muted, fontSize: 13, fontWeight: '600' },
+  smallLabel: { color: colors.muted, fontSize: 11, lineHeight: 17, fontWeight: '700', letterSpacing: 1.1 },
+  lowStockCard: { borderColor: '#E6D3AC' },
+  stockSummary: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 16, borderRadius: 14, backgroundColor: colors.background, padding: 16 },
+  balanceLabel: { color: colors.muted, fontSize: 10, fontWeight: '700', letterSpacing: 1, lineHeight: 17 },
+  quantity: { color: colors.navy, fontSize: 29, fontWeight: '800', letterSpacing: -0.7, fontVariant: ['tabular-nums'] },
   unit: { fontSize: 14, fontWeight: '500', color: colors.muted },
+  thresholdSummary: { flexShrink: 1, gap: 4 },
   threshold: { color: colors.navy, fontSize: 15, fontWeight: '600', lineHeight: 23 },
+  divider: { height: 1, backgroundColor: colors.border },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   actionButton: { flex: 1, minWidth: 120 },
-  movementAmount: { fontSize: 15, fontWeight: '700', flexShrink: 1 },
+  historyCaption: { color: colors.muted, fontSize: 12, lineHeight: 19, marginTop: -10 },
+  historyCard: { padding: 0, gap: 0, overflow: 'hidden' },
+  historyEntry: { padding: 18, gap: 10 },
+  historyDivider: { borderTopWidth: 1, borderTopColor: colors.border },
+  movementAmount: { fontSize: 15, fontWeight: '700', flexShrink: 1, fontVariant: ['tabular-nums'], lineHeight: 22 },
+  movementNote: { color: colors.muted, fontSize: 13, lineHeight: 21, paddingLeft: 2 },
+  dialogSummary: { backgroundColor: colors.background },
+  previewCard: { backgroundColor: '#F0F8F6', borderColor: '#C7DED9', gap: 12 },
   preview: { color: colors.navy, fontSize: 14, lineHeight: 23 },
 });

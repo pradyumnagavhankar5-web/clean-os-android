@@ -113,6 +113,7 @@ jobs:
           "$build_tools/aapt2" dump badging artifacts/CleanOS-preview.apk \
             > artifacts/APK-manifest.txt
           python - <<'PY'
+          import json
           import os
           import re
           import zipfile
@@ -122,6 +123,14 @@ jobs:
           package = re.search(r"^package: name='([^']+)'", manifest, re.MULTILINE)
           if not package or package.group(1) != 'in.auratradings.cleanos':
               raise SystemExit('APK package does not match CleanOS.')
+          config = json.loads(Path('app.json').read_text())['expo']
+          version = re.search(r"^package: .*versionCode='([^']+)' .*versionName='([^']+)'", manifest, re.MULTILINE)
+          if not version or version.groups() != (str(config['android']['versionCode']), config['version']):
+              raise SystemExit('APK version does not match the configured update version.')
+          certificate = 'fac61745dc0903786fb9ede62a962b399f7348f0bb6f899b8332667591033b9c'
+          signature = Path('artifacts/APK-signature.txt').read_text().lower()
+          if f'certificate sha-256 digest: {certificate}' not in signature:
+              raise SystemExit('Preview signing certificate changed; existing installations cannot update.')
           with zipfile.ZipFile('artifacts/CleanOS-preview.apk') as apk:
               if not apk.read('assets/index.android.bundle'):
                   raise SystemExit('The APK has no embedded JavaScript bundle.')
@@ -132,6 +141,7 @@ jobs:
           Path('artifacts/BUILD-INFO.txt').write_text(
               'CleanOS standalone Android preview\n'
               f"Source commit: {os.environ['GITHUB_SHA']}\n"
+              f"App version: {config['version']} (Android code {config['android']['versionCode']})\n"
               f"Included architectures: {', '.join(abis)}\n"
               'JavaScript bundle: embedded\n'
               'Signature: Expo template generic debug key, verified with apksigner\n'

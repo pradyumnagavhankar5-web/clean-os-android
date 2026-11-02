@@ -2,6 +2,8 @@
 
 **Smart Housekeeping Management · Aura Tradings, India**
 
+Developed by **Aura Builds**.
+
 Source repository: [pradyumnagavhankar5-web/clean-os-android](https://github.com/pradyumnagavhankar5-web/clean-os-android).
 
 An Android-only housekeeping prototype built with Expo SDK 58, React Native,
@@ -23,6 +25,11 @@ an optional future integration.
 3. Open the APK from your phone's **Downloads**. If Android asks, allow that
    browser or Files app to install it, then tap **Install**.
 4. Launch **CleanOS**, tap **Explore the demo**, and choose a demo role.
+
+If CleanOS is already installed, open the new APK and choose **Update**. Keep the
+existing app installed to retain your locally saved demo tasks and stock changes.
+Version 1.0.1 adds the house-and-checkmark logo, Aura Builds developer credit and
+refined layouts across the app. The business remains Aura Tradings, India.
 
 The download appears only after the
 [Android preview workflow](https://github.com/pradyumnagavhankar5-web/clean-os-android/actions/workflows/android-preview.yml)

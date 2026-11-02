@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useApp } from '../state/AppProvider';
 import { dateKey, isDateKey, type Task, type Priority } from '../domain';
 import { Button, Chip, Field, ModalSheet, Notice, SectionTitle, colors } from '../ui';
@@ -39,21 +39,40 @@ export default function TaskEditor({ task, onClose }: { task?: Task; onClose: ()
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Could not save the task. Please retry.'); }
   }
   return <ModalSheet visible title={task ? 'Edit task' : 'Create a task'} onClose={() => { if (!busy) onClose(); }}>
-    <Text style={{color:colors.muted}}>Give your team a clear area, owner and checklist.</Text>
-    <Field label="Task title" value={title} onChangeText={setTitle} placeholder="e.g. Morning lobby cleaning" editable={!busy} />
-    <SectionTitle title="Facility" />
-    <View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>{state.facilities.map((item) => <Chip key={item.id} label={item.name} selected={facilityId===item.id} onPress={() => { if (busy) return; setFacilityId(item.id); setAreaId(item.areas[0]?.id ?? ''); }} />)}</View>
-    <SectionTitle title="Cleaning area" />
-    <View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>{facility?.areas.map((area) => <Chip key={area.id} label={area.name} selected={areaId===area.id} onPress={() => { if (!busy) setAreaId(area.id); }} />)}</View>
-    <SectionTitle title="Assign to" />
-    <View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>{state.staff.map((member) => <Chip key={member.id} label={member.name} selected={assigneeId===member.id} onPress={() => { if (!busy) setAssigneeId(member.id); }} />)}</View>
-    <Field label="Due date · DD/MM/YYYY · India time" value={dueDate} onChangeText={setDueDate} placeholder="31/10/2026" keyboardType="numbers-and-punctuation" editable={!busy} />
-    <SectionTitle title="Priority" />
-    <View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>{(['low','medium','high'] as const).map((value) => <Chip key={value} label={value[0].toUpperCase()+value.slice(1)} selected={priority===value} onPress={() => { if (!busy) setPriority(value); }} />)}</View>
-    <Field label="Checklist · one step per line" value={checklist} onChangeText={setChecklist} multiline editable={!busy} />
-    <Field label="Notes (optional)" value={notes} onChangeText={setNotes} multiline placeholder="Safety instructions, supplies or access details" editable={!busy} />
+    <Text style={styles.intro}>Set a clear location, owner and cleaning standard for this assignment.</Text>
+    <View style={styles.formSection}>
+      <SectionTitle title="Task details" />
+      <Field label="Task title" value={title} onChangeText={setTitle} placeholder="e.g. Morning lobby cleaning" editable={!busy} />
+      <Field label="Due date · DD/MM/YYYY" value={dueDate} onChangeText={setDueDate} placeholder="31/10/2026" keyboardType="numbers-and-punctuation" editable={!busy} />
+      <Text style={styles.hint}>Dates follow India time (Asia/Kolkata).</Text>
+      <Text style={styles.groupLabel}>Priority</Text>
+      <View style={styles.options}>{(['low', 'medium', 'high'] as const).map((value) => <Chip key={value} label={value[0].toUpperCase() + value.slice(1)} selected={priority === value} onPress={() => { if (!busy) setPriority(value); }} />)}</View>
+    </View>
+    <View style={styles.formSection}>
+      <SectionTitle title="Location & ownership" />
+      <Text style={styles.groupLabel}>Facility</Text>
+      <View style={styles.options}>{state.facilities.map((item) => <Chip key={item.id} label={item.name} selected={facilityId === item.id} onPress={() => { if (busy) return; setFacilityId(item.id); setAreaId(item.areas[0]?.id ?? ''); }} />)}</View>
+      <Text style={styles.groupLabel}>Cleaning area</Text>
+      <View style={styles.options}>{facility?.areas.map((area) => <Chip key={area.id} label={area.name} selected={areaId === area.id} onPress={() => { if (!busy) setAreaId(area.id); }} />)}</View>
+      <Text style={styles.groupLabel}>Assign to</Text>
+      <View style={styles.options}>{state.staff.map((member) => <Chip key={member.id} label={member.name} selected={assigneeId === member.id} onPress={() => { if (!busy) setAssigneeId(member.id); }} />)}</View>
+    </View>
+    <View style={styles.formSection}>
+      <SectionTitle title="Cleaning standard" />
+      <Text style={styles.hint}>Add one checklist step per line. Staff must complete every step before finishing the task.</Text>
+      <Field label="Checklist steps" value={checklist} onChangeText={setChecklist} multiline editable={!busy} />
+      <Field label="Notes (optional)" value={notes} onChangeText={setNotes} multiline placeholder="Safety instructions, supplies or access details" editable={!busy} />
+    </View>
     {task?.status === 'completed' ? <Notice message="Changing a checklist step reopens this task so the new work can be checked." /> : null}
     {error ? <Notice message={error} tone="error" /> : null}
     <Button label={task ? 'Save changes' : 'Create and assign task'} icon="checkmark-outline" onPress={() => void save()} loading={busy} />
   </ModalSheet>;
 }
+
+const styles = StyleSheet.create({
+  intro: { color: colors.muted, fontSize: 14, lineHeight: 22 },
+  formSection: { gap: 14, padding: 18, backgroundColor: colors.white, borderRadius: 18, borderWidth: 1, borderColor: colors.border },
+  groupLabel: { color: colors.navy, fontSize: 13, fontWeight: '600', lineHeight: 20 },
+  hint: { color: colors.muted, fontSize: 12, lineHeight: 20 },
+  options: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+});
