@@ -1,0 +1,131 @@
+name: Diagnose published Android APK installation
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['diagnostics/android-install-1-0-1']
+    paths:
+      - '.github/workflows/android-install-check.yml'
+      - '.github/scripts/check-android-install.sh'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-install-diagnostic-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  install:
+    if: github.repository == 'pradyumnagavhankar5-web/clean-os-android' && github.ref == 'refs/heads/diagnostics/android-install-1-0-1'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out diagnostic source
+        uses: actions/checkout@v4
+
+      - name: Prepare evidence and validate diagnostic script
+        run: |
+          mkdir -p artifacts downloads
+          bash -n .github/scripts/check-android-install.sh
+          printf '%s\n' \
+            'CleanOS 1.0.1 published APK fresh-install diagnostic' \
+            'This workflow uses an Android emulator, not a physical device.' \
+            'Release: android-preview-4-1-ed6fdfa' \
+            'App source: ed6fdfa2a56ae8fb144e5731766447913be678dd' \
+            > artifacts/DIAGNOSTIC-INFO.txt
+
+      - name: Download and verify the exact published APK
+        run: |
+          apk_path=downloads/CleanOS-preview.apk
+          curl --fail --location --retry 3 --retry-delay 2 \
+            --output "$apk_path" \
+            https://github.com/pradyumnagavhankar5-web/clean-os-android/releases/download/android-preview-4-1-ed6fdfa/CleanOS-preview.apk
+          actual_size="$(stat -c '%s' "$apk_path")"
+          printf 'Downloaded bytes: %s\n' "$actual_size" | tee artifacts/download-size.txt
+          test "$actual_size" = 89988841
+          printf '%s  %s\n' \
+            499c248073a67edcbb3237215891ca15cd4efd088151e06695513cec93a763e7 \
+            "$apk_path" > artifacts/published-apk.sha256
+          sha256sum --check artifacts/published-apk.sha256 | tee artifacts/download-checksum.txt
+
+      - name: Report APK size by content
+        run: |
+          python - <<'PY'
+          import json
+          import zipfile
+          from collections import defaultdict
+          from pathlib import Path
+
+          apk = Path('downloads/CleanOS-preview.apk')
+          groups = defaultdict(lambda: {'entries': 0, 'compressed_bytes': 0, 'uncompressed_bytes': 0})
+          with zipfile.ZipFile(apk) as archive:
+              entries = [entry for entry in archive.infolist() if not entry.is_dir()]
+              for entry in entries:
+                  name = entry.filename
+                  if name.startswith('lib/') and name.count('/') >= 2:
+                      category = 'native/' + name.split('/')[1]
+                  elif name.startswith('assets/'):
+                      category = 'assets'
+                  elif name.endswith('.dex'):
+                      category = 'dex'
+                  elif name.startswith('res/') or name == 'resources.arsc':
+                      category = 'resources'
+                  else:
+                      category = 'package metadata and other'
+                  totals = groups[category]
+                  totals['entries'] += 1
+                  totals['compressed_bytes'] += entry.compress_size
+                  totals['uncompressed_bytes'] += entry.file_size
+              largest = [
+                  {'path': entry.filename, 'compressed_bytes': entry.compress_size, 'uncompressed_bytes': entry.file_size}
+                  for entry in sorted(entries, key=lambda item: item.compress_size, reverse=True)[:20]
+              ]
+          report = {
+              'apk_bytes': apk.stat().st_size,
+              'entry_compressed_bytes': sum(group['compressed_bytes'] for group in groups.values()),
+              'entry_uncompressed_bytes': sum(group['uncompressed_bytes'] for group in groups.values()),
+              'groups': dict(sorted(groups.items())),
+              'largest_entries': largest,
+              'note': 'Entry totals exclude ZIP headers, alignment padding and the APK signing block.',
+          }
+          Path('artifacts/apk-size-breakdown.json').write_text(json.dumps(report, indent=2) + '\n')
+          print('APK_BYTES=' + str(report['apk_bytes']))
+          for category, totals in report['groups'].items():
+              print(f"{category}: compressed={totals['compressed_bytes']} uncompressed={totals['uncompressed_bytes']}")
+          PY
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Fresh install and launch on Android 16
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          force-avd-creation: true
+          emulator-boot-timeout: 600
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          script: bash .github/scripts/check-android-install.sh downloads/CleanOS-preview.apk
+
+      - name: Upload installation and launch evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cleanos-1.0.1-android-36-install-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/
+          if-no-files-found: warn
+          retention-days: 14
