@@ -15,6 +15,7 @@ on:
       - 'metro.config.*'
       - 'tsconfig.json'
       - '.github/workflows/android-preview.yml'
+      - '.github/scripts/verify-preview-apks.py'
 
 permissions:
   contents: read
@@ -35,6 +36,9 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v4
+
+      - name: Validate APK verification script
+        run: python -m py_compile .github/scripts/verify-preview-apks.py
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -93,63 +97,48 @@ jobs:
           print(f'Official API {api_level} SDK installed; Gradle API 37 path is available.')
           PY
 
-      - name: Build the standalone preview
+      - name: Build the recommended APK for modern phones
         working-directory: android
         run: |
           chmod +x gradlew
-          # The generated Expo template signs this release variant with its
-          # generic debug key. It embeds the JS bundle and needs no Metro server.
+          # Both builds use the same generated project and preview signing key.
+          # Stage this APK before the next ABI build replaces app-release.apk.
           ./gradlew :app:assembleRelease --no-daemon --max-workers=2 \
             -Dorg.gradle.jvmargs='-Xmx4096m -XX:MaxMetaspaceSize=1024m -Dfile.encoding=UTF-8' \
-            -Pandroid.cmakeVersion=3.30.5
+            -Pandroid.cmakeVersion=3.30.5 \
+            -PreactNativeArchitectures=arm64-v8a
+          mkdir -p ../artifacts
+          cp app/build/outputs/apk/release/app-release.apk ../artifacts/CleanOS-preview.apk
 
-      - name: Verify and package the APK
+      - name: Build the older-device compatibility APK
+        working-directory: android
         run: |
-          mkdir -p artifacts
-          cp android/app/build/outputs/apk/release/app-release.apk artifacts/CleanOS-preview.apk
-          build_tools="${ANDROID_HOME}/build-tools/37.0.0"
-          "$build_tools/apksigner" verify --verbose --print-certs artifacts/CleanOS-preview.apk \
-            > artifacts/APK-signature.txt
-          "$build_tools/aapt2" dump badging artifacts/CleanOS-preview.apk \
-            > artifacts/APK-manifest.txt
-          python - <<'PY'
-          import json
-          import os
-          import re
-          import zipfile
-          from pathlib import Path
+          # Reuse the same native project, key and caches; do not clean between ABIs.
+          ./gradlew :app:assembleRelease --no-daemon --max-workers=2 \
+            -Dorg.gradle.jvmargs='-Xmx4096m -XX:MaxMetaspaceSize=1024m -Dfile.encoding=UTF-8' \
+            -Pandroid.cmakeVersion=3.30.5 \
+            -PreactNativeArchitectures=armeabi-v7a
+          cp app/build/outputs/apk/release/app-release.apk ../artifacts/CleanOS-preview-armv7.apk
 
-          manifest = Path('artifacts/APK-manifest.txt').read_text()
-          package = re.search(r"^package: name='([^']+)'", manifest, re.MULTILINE)
-          if not package or package.group(1) != 'in.auratradings.cleanos':
-              raise SystemExit('APK package does not match CleanOS.')
-          config = json.loads(Path('app.json').read_text())['expo']
-          version = re.search(r"^package: .*versionCode='([^']+)' .*versionName='([^']+)'", manifest, re.MULTILINE)
-          if not version or version.groups() != (str(config['android']['versionCode']), config['version']):
-              raise SystemExit('APK version does not match the configured update version.')
-          certificate = 'fac61745dc0903786fb9ede62a962b399f7348f0bb6f899b8332667591033b9c'
-          signature = Path('artifacts/APK-signature.txt').read_text().lower()
-          if f'certificate sha-256 digest: {certificate}' not in signature:
-              raise SystemExit('Preview signing certificate changed; existing installations cannot update.')
-          with zipfile.ZipFile('artifacts/CleanOS-preview.apk') as apk:
-              if not apk.read('assets/index.android.bundle'):
-                  raise SystemExit('The APK has no embedded JavaScript bundle.')
-              abis = sorted({name.split('/')[1] for name in apk.namelist()
-                             if name.startswith('lib/') and name.count('/') >= 2})
-          if not {'arm64-v8a', 'armeabi-v7a'}.issubset(abis):
-              raise SystemExit(f'Expected Android phone architectures are missing: {abis}')
-          Path('artifacts/BUILD-INFO.txt').write_text(
-              'CleanOS standalone Android preview\n'
-              f"Source commit: {os.environ['GITHUB_SHA']}\n"
-              f"App version: {config['version']} (Android code {config['android']['versionCode']})\n"
-              f"Included architectures: {', '.join(abis)}\n"
-              'JavaScript bundle: embedded\n'
-              'Signature: Expo template generic debug key, verified with apksigner\n'
-              'Physical Android device testing: not performed by this workflow\n'
+      - name: Verify and package both APKs
+        run: |
+          build_tools="${ANDROID_HOME}/build-tools/37.0.0"
+          for filename in CleanOS-preview.apk CleanOS-preview-armv7.apk; do
+            apk="artifacts/$filename"
+            prefix="${filename%.apk}"
+            "$build_tools/apksigner" verify --verbose --print-certs "$apk" \
+              > "artifacts/$prefix-signature.txt"
+            "$build_tools/aapt2" dump badging "$apk" \
+              > "artifacts/$prefix-manifest.txt"
+            "$build_tools/zipalign" -c -P 16 -v 4 "$apk" \
+              > "artifacts/$prefix-alignment.txt"
+          done
+          python .github/scripts/verify-preview-apks.py
+          (
+            cd artifacts
+            sha256sum CleanOS-preview.apk > CleanOS-preview.apk.sha256
+            sha256sum CleanOS-preview-armv7.apk > CleanOS-preview-armv7.apk.sha256
           )
-          print(f"Verified signed CleanOS APK with embedded JavaScript; architectures: {', '.join(abis)}")
-          PY
-          (cd artifacts && sha256sum CleanOS-preview.apk > CleanOS-preview.apk.sha256)
 
       - name: Save verified APK and build evidence
         uses: actions/upload-artifact@v4
@@ -172,30 +161,41 @@ jobs:
           name: cleanos-android-preview-${{ github.run_number }}-${{ github.run_attempt }}
           path: artifacts
 
-      - name: Publish the preview download
+      - name: Publish both preview downloads
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          (cd artifacts && sha256sum --check CleanOS-preview.apk.sha256)
+          (
+            cd artifacts
+            sha256sum --check CleanOS-preview.apk.sha256
+            sha256sum --check CleanOS-preview-armv7.apk.sha256
+          )
           preview_tag="android-preview-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}-${GITHUB_SHA:0:7}"
           cat > release-notes.md <<EOF
-          Install **CleanOS-preview.apk** on your Android phone. Android may ask you to allow installation from the browser.
+          ## Choose one CleanOS download
 
-          This is a standalone local demo. Expo Go, an Expo account, a development server and a backend connection are not needed to use it.
+          - **Recommended: CleanOS-preview.apk** — the smaller build for most current Android phones and tablets.
+          - **Older-device compatibility: CleanOS-preview-armv7.apk** — try this if your older Android device cannot install the recommended download.
 
-          The APK uses the Expo template's generic debug signing key and is intended for preview testing. It is not a Play Store production release.
+          These are two variants of the same CleanOS version. Both require Android 7 or newer and include the app's JavaScript. Expo Go, an Expo account, a development server and a backend connection are not needed to use the local demo.
+
+          Download the file you need, then open it on your phone. Android may ask you to allow installation from the browser. Each APK has its own SHA-256 checksum file.
+
+          Both APKs use the same Expo template generic debug signing key and are intended for preview testing. They are not Play Store production releases.
 
           Source commit: ${GITHUB_SHA}
-          Automated checks and APK signature/bundle validation passed. Physical Android device testing has not been performed by this workflow.
+          Automated checks and each APK's signature, package, version, single architecture, embedded JavaScript and ZIP alignment were verified. The recommended APK's ARM64 native libraries also passed ELF PT_LOAD alignment checks for 16 KiB pages. Physical Android device testing has not been performed by this workflow.
           EOF
           gh release create "$preview_tag" \
             artifacts/CleanOS-preview.apk \
             artifacts/CleanOS-preview.apk.sha256 \
+            artifacts/CleanOS-preview-armv7.apk \
+            artifacts/CleanOS-preview-armv7.apk.sha256 \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
             --title "CleanOS Android preview ${preview_tag}" \
             --prerelease \
             --notes-file release-notes.md
-          download_url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${preview_tag}/CleanOS-preview.apk"
-          printf '### CleanOS Android preview\n\n[Download the APK](%s)\n\nSource: `%s`\n' \
-            "$download_url" "$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
+          download_base="https://github.com/${GITHUB_REPOSITORY}/releases/download/${preview_tag}"
+          printf '### CleanOS Android preview\n\n[Recommended APK for modern phones](%s/CleanOS-preview.apk)\n\n[Older-device compatibility APK](%s/CleanOS-preview-armv7.apk)\n\nSource commit: %s\n' \
+            "$download_base" "$download_base" "$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"

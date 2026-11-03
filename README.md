@@ -21,7 +21,9 @@ an optional future integration.
 1. On your phone, open the repository's
    [Android preview downloads](https://github.com/pradyumnagavhankar5-web/clean-os-android/releases).
 2. Open the newest preview release, expand **Assets** if needed, and download
-   **`CleanOS-preview.apk`**.
+   **`CleanOS-preview.apk`** (recommended for modern Android phones and tablets).
+   For an older 32-bit Android device, choose **`CleanOS-preview-armv7.apk`**.
+   Choose one APK for your device.
 3. Open the APK from your phone's **Downloads**. If Android asks, allow that
    browser or Files app to install it, then tap **Install**.
 4. Launch **CleanOS**, tap **Explore the demo**, and choose a demo role.
@@ -30,6 +32,10 @@ If CleanOS is already installed, open the new APK and choose **Update**. Keep th
 existing app installed to retain your locally saved demo tasks and stock changes.
 Version 1.0.1 adds the house-and-checkmark logo, Aura Builds developer credit and
 refined layouts across the app. The business remains Aura Tradings, India.
+Version 1.0.2 introduces smaller phone-specific downloads. Each standalone APK
+includes one phone processor variant, reducing download and installed app size.
+Tasks, stock management, branding and local saving are included in both versions.
+Emulator libraries are excluded from these phone downloads.
 
 The download appears only after the
 [Android preview workflow](https://github.com/pradyumnagavhankar5-web/clean-os-android/actions/workflows/android-preview.yml)

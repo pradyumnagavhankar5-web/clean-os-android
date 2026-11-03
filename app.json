@@ -2,7 +2,7 @@
   "expo": {
     "name": "CleanOS",
     "slug": "cleanos-android",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "scheme": "cleanos",
     "platforms": [
       "android"
@@ -12,7 +12,7 @@
     "userInterfaceStyle": "light",
     "android": {
       "package": "in.auratradings.cleanos",
-      "versionCode": 2,
+      "versionCode": 3,
       "adaptiveIcon": {
         "backgroundColor": "#102D3D",
         "foregroundImage": "./assets/cleanos-icon.png"
