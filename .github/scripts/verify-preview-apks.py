@@ -36,8 +36,9 @@ def arm64_load_alignments(data, library):
 config = json.loads(Path('app.json').read_text())['expo']
 certificate = 'fac61745dc0903786fb9ede62a962b399f7348f0bb6f899b8332667591033b9c'
 previews = [
-    ('CleanOS-preview.apk', 'arm64-v8a', 'Recommended for modern Android phones and tablets'),
-    ('CleanOS-preview-armv7.apk', 'armeabi-v7a', 'Older-device compatibility download'),
+    ('CleanOS-team-preview.apk', 'arm64-v8a', 'Recommended for modern Android phones and tablets'),
+    ('CleanOS-team-preview-armv7.apk', 'armeabi-v7a', 'Older-device compatibility download'),
+    ('CleanOS-emulator.apk', 'x86_64', 'Installation test only; not a phone download'),
 ]
 metadata = []
 for filename, expected_abi, label in previews:
@@ -45,7 +46,7 @@ for filename, expected_abi, label in previews:
     path = Path('artifacts') / filename
     manifest = Path(f'artifacts/{prefix}-manifest.txt').read_text()
     package = re.search(r"^package: name='([^']+)'", manifest, re.MULTILINE)
-    if not package or package.group(1) != 'in.auratradings.cleanos':
+    if not package or package.group(1) != config['android']['package']:
         raise SystemExit(f'{filename}: APK package does not match CleanOS.')
     version = re.search(r"^package: .*versionCode='([^']+)' .*versionName='([^']+)'", manifest, re.MULTILINE)
     expected_version = (str(config['android']['versionCode']), config['version'])

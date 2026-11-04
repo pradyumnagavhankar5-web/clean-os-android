@@ -7,10 +7,13 @@ import { Button, Chip, Field, ModalSheet, Notice, SectionTitle, colors } from '.
 const id = () => `task-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 export default function TaskEditor({ task, onClose }: { task?: Task; onClose: () => void }) {
   const { state, act, busy } = useApp();
+  const facilities = state.facilities.filter(item => item.active !== false);
+  const staff = state.staff.filter(item => item.active !== false);
+  const [draftId] = useState(() => task?.id ?? id());
   const [title, setTitle] = useState(task?.title ?? '');
-  const [facilityId, setFacilityId] = useState(task?.facilityId ?? state.facilities[0]?.id ?? '');
-  const [areaId, setAreaId] = useState(task?.areaId ?? state.facilities[0]?.areas[0]?.id ?? '');
-  const [assigneeId, setAssigneeId] = useState(task?.assigneeId ?? state.staff[0]?.id ?? '');
+  const [facilityId, setFacilityId] = useState(task?.facilityId ?? facilities[0]?.id ?? '');
+  const [areaId, setAreaId] = useState(task?.areaId ?? facilities[0]?.areas.find(item => item.active !== false)?.id ?? '');
+  const [assigneeId, setAssigneeId] = useState(task?.assigneeId ?? staff[0]?.id ?? '');
   const [dueDate, setDueDate] = useState((task?.dueDate ?? dateKey()).split('-').reverse().join('/'));
   const [priority, setPriority] = useState<Priority>(task?.priority ?? 'medium');
   const [notes, setNotes] = useState(task?.notes ?? '');
@@ -21,11 +24,13 @@ export default function TaskEditor({ task, onClose }: { task?: Task; onClose: ()
     setError('');
     try {
       if (!title.trim()) throw new Error('Enter a task title.');
+      if (title.trim().length > 200 || notes.trim().length > 4000) throw new Error('Use a title up to 200 characters and notes up to 4,000 characters.');
       const date = dueDate.trim().split('/').reverse().join('-');
       if (!/^\d{2}\/\d{2}\/\d{4}$/.test(dueDate.trim()) || !isDateKey(date)) throw new Error('Enter a real date in DD/MM/YYYY format.');
       const labels = checklist.split('\n').map((label) => label.trim()).filter(Boolean);
       if (!labels.length) throw new Error('Add at least one checklist step.');
-      const taskId = task?.id ?? id();
+      if (labels.length > 100 || labels.some(label => label.length > 400)) throw new Error('Use up to 100 checklist steps, with up to 400 characters per step.');
+      const taskId = draftId;
       const steps = labels.map((label, index) => {
         const previous = task?.checklist[index];
         return { id: previous?.id ?? `${taskId}-step-${index}`, label, done: previous?.label === label ? previous.done : false };
@@ -33,7 +38,7 @@ export default function TaskEditor({ task, onClose }: { task?: Task; onClose: ()
       await act({ type: 'saveTask', task: {
         id: taskId, title: title.trim(), facilityId, areaId, assigneeId, dueDate: date, priority,
         status: task?.status === 'completed' && steps.some((step) => !step.done) ? 'in_progress' : task?.status ?? 'pending',
-        checklist: steps, notes: notes.trim(),
+        checklist: steps, notes: notes.trim(), revision: task?.revision,
       } });
       onClose();
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Could not save the task. Please retry.'); }
@@ -51,11 +56,12 @@ export default function TaskEditor({ task, onClose }: { task?: Task; onClose: ()
     <View style={styles.formSection}>
       <SectionTitle title="Location & ownership" />
       <Text style={styles.groupLabel}>Facility</Text>
-      <View style={styles.options}>{state.facilities.map((item) => <Chip key={item.id} label={item.name} selected={facilityId === item.id} onPress={() => { if (busy) return; setFacilityId(item.id); setAreaId(item.areas[0]?.id ?? ''); }} />)}</View>
+      {!facilities.length ? <Notice message="Add a facility and cleaning area in Facilities before creating a task." /> : null}
+      <View style={styles.options}>{facilities.map((item) => <Chip key={item.id} label={item.name} selected={facilityId === item.id} onPress={() => { if (busy) return; setFacilityId(item.id); setAreaId(item.areas.find(area => area.active !== false)?.id ?? ''); }} />)}</View>
       <Text style={styles.groupLabel}>Cleaning area</Text>
-      <View style={styles.options}>{facility?.areas.map((area) => <Chip key={area.id} label={area.name} selected={areaId === area.id} onPress={() => { if (!busy) setAreaId(area.id); }} />)}</View>
+      <View style={styles.options}>{facility?.areas.filter(area => area.active !== false).map((area) => <Chip key={area.id} label={area.name} selected={areaId === area.id} onPress={() => { if (!busy) setAreaId(area.id); }} />)}</View>
       <Text style={styles.groupLabel}>Assign to</Text>
-      <View style={styles.options}>{state.staff.map((member) => <Chip key={member.id} label={member.name} selected={assigneeId === member.id} onPress={() => { if (!busy) setAssigneeId(member.id); }} />)}</View>
+      <View style={styles.options}>{staff.map((member) => <Chip key={member.id} label={member.name} selected={assigneeId === member.id} onPress={() => { if (!busy) setAssigneeId(member.id); }} />)}</View>
     </View>
     <View style={styles.formSection}>
       <SectionTitle title="Cleaning standard" />

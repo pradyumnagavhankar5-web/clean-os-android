@@ -106,3 +106,16 @@ Tester / device models / Android versions: __________
   The published privacy notice and support contact match the actual service.
 - [ ] Open failures from this checklist are resolved or recorded as explicit
   rollout limitations before the build is described as a final shared release.
+
+## Implementation evidence — 4 November 2026
+
+- Local lint and TypeScript checks passed.
+- 57 JavaScript/TypeScript tests passed, including secure credential persistence,
+  strict callback handling, RFC7636 S256 transport, account-switch isolation,
+  canonical server reads and retry IDs.
+- 67 assertions passed in real PostgreSQL 17 with isolated Auth fixtures,
+  including cross-organisation denial, forged roles, staff permissions,
+  immutable stock history, stale revisions and simultaneous stock/admin changes.
+- Android JavaScript export passed with Expo SDK 58.
+- Hosted SQL deployment, real email delivery, owner signing and real-phone
+  acceptance are not established by these local checks.

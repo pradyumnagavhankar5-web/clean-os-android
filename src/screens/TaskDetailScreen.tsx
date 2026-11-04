@@ -46,14 +46,14 @@ export default function TaskDetailScreen() {
             <Text style={styles.body}>Complete each step, then mark the task as finished.</Text>
             <View style={styles.progressTrack} accessible accessibilityRole="progressbar" accessibilityLabel="Checklist completion" accessibilityValue={{ min: 0, max: 100, now: percent }}><View style={[styles.progressFill, { width: `${percent}%` }]} /></View>
           </View>
-          {task.checklist.map((item, index) => <Pressable key={item.id} accessibilityRole="checkbox" accessibilityLabel={item.label} accessibilityState={{ checked: item.done, disabled: busy }} disabled={busy} onPress={() => void update({ type: 'toggleChecklist', taskId: task.id, itemId: item.id })} style={({ pressed }) => [styles.step, index > 0 && styles.stepDivider, item.done && styles.stepDone, pressed && styles.pressed]}>
+          {task.checklist.map((item, index) => <Pressable key={item.id} accessibilityRole="checkbox" accessibilityLabel={item.label} accessibilityState={{ checked: item.done, disabled: busy }} disabled={busy} onPress={() => void update({ type: 'setChecklistDone', taskId: task.id, itemId: item.id, done: !item.done, expectedRevision: task.revision })} style={({ pressed }) => [styles.step, index > 0 && styles.stepDivider, item.done && styles.stepDone, pressed && styles.pressed]}>
             <Ionicons name={item.done ? 'checkmark-circle' : 'ellipse-outline'} size={27} color={item.done ? colors.teal : colors.muted} accessible={false} /><Text style={[styles.stepLabel, item.done && styles.completedLabel]}>{item.label}</Text>
           </Pressable>)}
         </Card>
         {error ? <Notice message={error} tone="error" /> : null}
         <View style={styles.actions}>
-          {task.status === 'pending' ? <Button label="Start task" icon="play-outline" variant="secondary" loading={busy} onPress={() => void update({ type: 'setTaskStatus', taskId: task.id, status: 'in_progress' })} /> : null}
-          {task.status !== 'completed' ? <Button label="Complete task" icon="checkmark-circle-outline" loading={busy} onPress={() => void update({ type: 'setTaskStatus', taskId: task.id, status: 'completed' })} /> : <><Notice message="Task completed. Your dashboard has been updated." tone="success" /><Button label="Reopen task" variant="secondary" loading={busy} onPress={() => void update({ type: 'setTaskStatus', taskId: task.id, status: 'in_progress' })} /></>}
+          {task.status === 'pending' ? <Button label="Start task" icon="play-outline" variant="secondary" loading={busy} onPress={() => void update({ type: 'setTaskStatus', taskId: task.id, status: 'in_progress', expectedRevision: task.revision })} /> : null}
+          {task.status !== 'completed' ? <Button label="Complete task" icon="checkmark-circle-outline" loading={busy} onPress={() => void update({ type: 'setTaskStatus', taskId: task.id, status: 'completed', expectedRevision: task.revision })} /> : <><Notice message="Task completed. Your dashboard has been updated." tone="success" /><Button label="Reopen task" variant="secondary" loading={busy} onPress={() => void update({ type: 'setTaskStatus', taskId: task.id, status: 'in_progress', expectedRevision: task.revision })} /></>}
         </View>
         {editing ? <TaskEditor task={task} onClose={() => setEditing(false)} /> : null}
       </Screen>

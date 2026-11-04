@@ -9,7 +9,7 @@
 \set expired_user 00000000-0000-4000-8000-000000000009
 
 SET ROLE anon;
-SELECT test.assert_true(public.cleanos_schema_version()=1,'anonymous may inspect only the schema version');
+SELECT test.assert_true(public.cleanos_schema_version()=2,'anonymous may inspect only the schema version');
 SELECT test.assert_raises('SELECT public.cleanos_workspace(''10000000-0000-4000-8000-000000000001'')',
   'anonymous cannot load workspace data','permission|auth|access|member|sign');
 SELECT test.assert_raises('SELECT * FROM public.cleanos_members',

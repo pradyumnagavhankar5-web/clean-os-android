@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import { useApp } from '../state/AppProvider';
 import { Button, Card, Chip, colors, Header, IconBadge, Notice, Screen, SectionTitle } from '../ui';
 import { BrandLogo } from '../ui/BrandLogo';
+import CloudProfileScreen from '../cloud/screens/CloudProfileScreen';
 
 const roles = {
   admin: { label: 'Facility Admin', description: 'View all facilities, assign tasks and manage inventory.' },
@@ -13,6 +14,11 @@ const roles = {
 };
 
 export default function ProfileScreen() {
+  const { mode } = useApp();
+  return mode === 'cloud' ? <CloudProfileScreen /> : <DemoProfileScreen />;
+}
+
+function DemoProfileScreen() {
   const { state, act, busy, resetDemo } = useApp();
   const [error, setError] = useState('');
   const role = roles[state.session?.role ?? 'admin'];

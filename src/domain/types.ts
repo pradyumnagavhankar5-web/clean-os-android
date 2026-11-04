@@ -2,9 +2,9 @@ export type Role = 'admin' | 'supervisor' | 'staff';
 export type TaskStatus = 'pending' | 'in_progress' | 'completed';
 export type Priority = 'low' | 'medium' | 'high';
 
-export interface Staff { id: string; name: string }
-export interface Area { id: string; name: string }
-export interface Facility { id: string; name: string; type: string; address: string; areas: Area[] }
+export interface Staff { id: string; name: string; role?: Role; active?: boolean; revision?: number }
+export interface Area { id: string; name: string; active?: boolean }
+export interface Facility { id: string; name: string; type: string; address: string; areas: Area[]; active?: boolean; revision?: number }
 export interface ChecklistItem { id: string; label: string; done: boolean }
 export interface Task {
   id: string;
@@ -17,6 +17,7 @@ export interface Task {
   status: TaskStatus;
   checklist: ChecklistItem[];
   notes: string;
+  revision?: number;
 }
 export interface InventoryItem {
   id: string;
@@ -26,6 +27,9 @@ export interface InventoryItem {
   quantity: number;
   threshold: number;
   unitPrice: number;
+  active?: boolean;
+  revision?: number;
+  balanceRevision?: number;
 }
 export interface StockMovement {
   id: string;
@@ -34,6 +38,7 @@ export interface StockMovement {
   quantity: number;
   note: string;
   createdAt: string;
+  locationId?: string;
 }
 export interface Session { role: Role; staffId: string }
 export interface AppState {
@@ -52,7 +57,8 @@ export type Action =
   | { type: 'login'; session: Session }
   | { type: 'logout' }
   | { type: 'saveTask'; task: Task }
-  | { type: 'setTaskStatus'; taskId: string; status: TaskStatus }
+  | { type: 'setTaskStatus'; taskId: string; status: TaskStatus; expectedRevision?: number }
   | { type: 'toggleChecklist'; taskId: string; itemId: string }
+  | { type: 'setChecklistDone'; taskId: string; itemId: string; done: boolean; expectedRevision?: number }
   | { type: 'recordStock'; movement: StockMovement }
-  | { type: 'setThreshold'; itemId: string; threshold: number };
+  | { type: 'setThreshold'; itemId: string; threshold: number; expectedRevision?: number };

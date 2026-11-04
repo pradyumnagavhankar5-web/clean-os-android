@@ -31,20 +31,25 @@ APKs store sample data locally.
    If it reports an error, keep the error text and line number for diagnosis.
    Avoid removing tables or rerunning fragments to work around an error.
 
-   After a successful run, create another query and run:
+   Then run the small [consistent-read update](../supabase/migrations/202611040002_consistent_reads.sql)
+   in a new SQL Editor query. This update is also safe when the first script was
+   applied earlier. It makes concurrent workspace reads consistent.
+
+   After both scripts succeed, create another query and run:
 
    ```sql
    select public.cleanos_schema_version();
    ```
 
-   The result must be `1`. If that query already succeeds, the initial migration
-   has already been applied; do not run the table-creation script again.
+   The result must be `2`. A result of `1` means only the initial migration has
+   been applied; run the small update. Do not run the table-creation script again.
 
 2. **Check email sign-in and confirmation.**
 
    Open **Authentication → Sign In / Providers → Email**, or the equivalent Email
    provider page in the dashboard. Enable email/password sign-in and allow new
-   users to sign up. Keep **Confirm email** enabled: creating or joining a CleanOS
+   users to sign up. Set the server minimum password length to **10** to match
+   the app. Keep **Confirm email** enabled: creating or joining a CleanOS
    workspace requires a verified email address.
 
    The public project settings observed during implementation had email sign-in

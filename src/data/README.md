@@ -1,26 +1,18 @@
-# Data boundary
+# Local demo data adapter
 
-`localRepository` is the only active adapter. It stores one validated, versioned
-demo snapshot with Expo Go compatible AsyncStorage. No network requests or secrets
-are needed. Its storage is local and unencrypted; use demo information only.
+`localRepository` and `StateRepository.load/save` serve only the explicitly
+selected local demo. AsyncStorage stores a validated, versioned sample snapshot;
+this is not the shared-workspace persistence interface. Local demo role selection
+is not authentication. Existing saved samples are never silently replaced.
 
-`StateRepository` in `repository.ts` separates persistence from the UI and domain.
-The provider saves transitions before publishing them and surfaces failed loads or
-writes. Invalid saved data is preserved for explicit user recovery; it is never
-silently replaced. Writes are queued in invocation order.
+The real client uses `src/cloud/repository.ts`: authenticated entity RPC commands
+and a canonical, user/organisation-scoped server read model. It never uploads a
+replacement AppState. Real accounts and memberships come from Supabase Auth and
+the database. The SQL migrations enforce tenant isolation, allowed task fields,
+revision checks, atomic stock changes and append-only history.
 
-For a future Supabase implementation, first design tables for organisations,
-memberships, facilities, areas, tasks, checklist items, products, and stock
-movements. Use real Supabase Auth and server-enforced row-level security for each
-organisation and role. Stock changes need an atomic database transaction to avoid
-lost updates and negative inventory. Stock movements should be append-only.
-
-A future repository adapter can map table data into the domain models. The whole
-snapshot save interface is suitable for this offline prototype; production should
-evolve to entity-level mutations, conflict handling and tenant-scoped queries
-before introducing multi-user writes. Demo role checks are not security controls.
-
-No Supabase client, URL, anon key, service-role key, production authentication or
-network connection is configured. Never place a Supabase service-role key in an
-Android app. Add and test schema migrations, RLS policies, authentication,
-organisation membership and recovery before enabling a live adapter.
+See `src/cloud/CONTRACT.md` and `docs/SUPABASE_SETUP.md`. Only a project URL and
+publishable key belong in the app; privileged database and service keys remain
+outside the Android client. Demo data is never imported into a real workspace
+automatically. Production sign-in credentials use native SecureStore, while
+workspace records are loaded from the server into memory.

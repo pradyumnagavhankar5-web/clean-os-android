@@ -3,7 +3,7 @@ import type { AppState } from '../domain/types';
 
 export const STORAGE_KEY = '@cleanos/demo-state/v1';
 
-/** Future data adapters should expose this boundary without coupling screens to a vendor. */
+/** Device-local demo persistence. Shared writes use entity RPCs in src/cloud. */
 export interface StateRepository {
   load(): Promise<AppState | null>;
   save(state: AppState): Promise<void>;

@@ -9,7 +9,7 @@ import { Button, Card, Chip, colors, EmptyState, Header, IconBadge, Metric, Scre
 const statusLabel = { pending: 'Pending', in_progress: 'In progress', completed: 'Completed' };
 
 export default function DashboardScreen() {
-  const { state } = useApp();
+  const { state, mode, cloud } = useApp();
   const today = useBusinessDate();
   const metrics = dashboardMetrics(state);
   const tasks = getVisibleTasks(state)
@@ -20,14 +20,15 @@ export default function DashboardScreen() {
   const isStaff = state.session?.role === 'staff';
   const firstName = state.staff.find(member => member.id === state.session?.staffId)?.name.split(' ')[0];
   const areaCount = state.facilities.reduce((count, facility) => count + facility.areas.length, 0);
+  const stockRoom = cloud?.locations.find(location => location.id === cloud.locationId)?.name;
 
   return (
     <Screen>
       <Header
         eyebrow={formatDate(today)}
         title={isStaff ? firstName ? `${firstName}’s workspace` : 'Your workspace' : 'Operations overview'}
-        subtitle={isStaff ? 'Your tasks, progress and supplies for the day.' : 'A clear view of your cleaning operations.'}
-        action={<Chip label="DEMO" tone="warning" />}
+        subtitle={`${isStaff ? 'Your tasks, progress and supplies for the day.' : 'A clear view of your cleaning operations.'}${stockRoom ? ` Stock room: ${stockRoom}.` : ''}`}
+        action={cloud ? <Button label="Refresh" variant="ghost" icon="refresh-outline" loading={cloud.refreshing} onPress={() => { void cloud.refresh().catch(() => undefined); }} /> : <Chip label="DEMO" tone="warning" />}
       />
 
       <View style={styles.section}>
@@ -154,7 +155,7 @@ export default function DashboardScreen() {
         </View>
         <Button label="Explore facilities" variant="ghost" icon="arrow-forward" onPress={() => router.push('/facilities')} />
       </Card>
-      <Text style={styles.footnote}>Local demo · Dates follow Asia/Kolkata</Text>
+      <Text style={styles.footnote}>{mode === 'demo' ? 'Local demo' : 'Shared workspace'} · Dates follow Asia/Kolkata</Text>
     </Screen>
   );
 }

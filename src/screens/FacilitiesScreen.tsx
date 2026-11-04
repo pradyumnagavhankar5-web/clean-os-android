@@ -1,43 +1,61 @@
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
-import { getVisibleTasks } from '../domain';
+import { getVisibleTasks, type Facility } from '../domain';
 import { useApp } from '../state/AppProvider';
-import { Button, Card, Chip, colors, EmptyState, Header, IconBadge, Screen } from '../ui';
+import CloudRefreshButton from '../cloud/components/CloudRefreshButton';
+import { Button, Card, Chip, colors, EmptyState, Header, IconBadge, Notice, Screen } from '../ui';
+import { FacilityEditor } from '../cloud/components/FacilityEditor';
+
+const newId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
 export default function FacilitiesScreen() {
-  const { state } = useApp();
+  const { state, cloud, busy } = useApp();
+  const [editing, setEditing] = useState<Facility | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
+  const [feedback, setFeedback] = useState('');
   const tasks = getVisibleTasks(state);
   const isStaff = state.session?.role === 'staff';
-  const areaCount = state.facilities.reduce((total, facility) => total + facility.areas.length, 0);
+  const canEdit = !!cloud && state.session?.role === 'admin';
+  const facilities = state.facilities.filter(facility => facility.active !== false || (canEdit && showArchived));
+  const areaCount = facilities.reduce((total, facility) => total + facility.areas.filter(area => showArchived || area.active !== false).length, 0);
+  function addFacility() {
+    setEditing({ id: newId('facility'), name: '', type: 'Office', address: '', active: true,
+      areas: [{ id: newId('area'), name: '', active: true }] });
+  }
   return (
     <Screen>
-      <Header eyebrow="WORKSPACE DIRECTORY" title="Facilities & areas" subtitle="A clear view of the spaces your team maintains." />
+      <Header eyebrow="WORKSPACE DIRECTORY" title="Facilities & areas" subtitle="A clear view of the spaces your team maintains." action={<View style={styles.chips}><CloudRefreshButton />{canEdit ? <Button label="Add facility" icon="add-outline" disabled={busy} onPress={addFacility} /> : null}</View>} />
+      {feedback ? <Notice tone="success" message={feedback} /> : null}
       <View style={styles.directorySummary}>
-        <View style={styles.summaryItem}><Text style={styles.summaryValue}>{state.facilities.length}</Text><Text style={styles.summaryLabel}>Facilities</Text></View>
+        <View style={styles.summaryItem}><Text style={styles.summaryValue}>{facilities.length}</Text><Text style={styles.summaryLabel}>Facilities</Text></View>
         <View style={styles.summaryDivider} />
         <View style={styles.summaryItem}><Text style={styles.summaryValue}>{areaCount}</Text><Text style={styles.summaryLabel}>Cleaning areas</Text></View>
       </View>
-      {state.facilities.length ? state.facilities.map(facility => {
+      {canEdit ? <View style={styles.chips}><Chip label="Active facilities" selected={!showArchived} onPress={() => setShowArchived(false)} /><Chip label="Include archived" selected={showArchived} onPress={() => setShowArchived(true)} /></View> : null}
+      {facilities.length ? facilities.map(facility => {
         const facilityTasks = tasks.filter(task => task.facilityId === facility.id);
         const done = facilityTasks.filter(task => task.status === 'completed').length;
         const percent = facilityTasks.length ? Math.round(done / facilityTasks.length * 100) : 0;
         return <Card key={facility.id}>
           <View style={styles.facilityHeader}><IconBadge name={facility.type.toLowerCase().includes('hospital') ? 'medkit-outline' : facility.type.toLowerCase().includes('hotel') ? 'bed-outline' : 'business-outline'} /><View style={styles.grow}><Text style={styles.name}>{facility.name}</Text><Text style={styles.address}>{facility.address}</Text></View></View>
-          <View style={styles.chips}><Chip label={facility.type} /><Chip label={`${facility.areas.length} areas`} /></View>
+          <View style={styles.chips}><Chip label={facility.type} /><Chip label={`${facility.areas.filter(area => area.active !== false).length} active areas`} />{facility.active === false ? <Chip label="Archived" tone="warning" /> : null}</View>
           <View style={styles.areaHeader}><Text style={styles.areaLabel}>CLEANING AREAS</Text><Text style={styles.areaHint}>Open tasks</Text></View>
-          <View style={styles.areas}>{facility.areas.map((area, index) => {
+          <View style={styles.areas}>{facility.areas.filter(area => showArchived || area.active !== false).map((area, index) => {
             const count = facilityTasks.filter(task => task.areaId === area.id && task.status !== 'completed').length;
-            return <Pressable key={area.id} accessibilityRole="button" accessibilityLabel={`View tasks for ${area.name}, ${count} open`} onPress={() => router.push({ pathname: '/tasks', params: { facilityId: facility.id, areaId: area.id } })} style={({ pressed }) => [styles.area, index > 0 && styles.areaDivider, pressed && styles.pressed]}><Ionicons name="location-outline" size={18} color={colors.teal} accessible={false} /><Text style={styles.areaName}>{area.name}</Text><View style={[styles.areaCountBadge, count === 0 && styles.areaCountClear]}><Text style={[styles.areaCount, count === 0 && styles.areaCountClearText]}>{count}</Text></View><Ionicons name="chevron-forward" size={16} color={colors.muted} accessible={false} /></Pressable>;
+            return <Pressable key={area.id} accessibilityRole="button" accessibilityLabel={`View tasks for ${area.name}, ${count} open${area.active === false ? ', archived' : ''}`} onPress={() => router.push({ pathname: '/tasks', params: { facilityId: facility.id, areaId: area.id } })} style={({ pressed }) => [styles.area, index > 0 && styles.areaDivider, pressed && styles.pressed]}><Ionicons name="location-outline" size={18} color={colors.teal} accessible={false} /><Text style={styles.areaName}>{area.name}{area.active === false ? ' · Archived' : ''}</Text><View style={[styles.areaCountBadge, count === 0 && styles.areaCountClear]}><Text style={[styles.areaCount, count === 0 && styles.areaCountClearText]}>{count}</Text></View><Ionicons name="chevron-forward" size={16} color={colors.muted} accessible={false} /></Pressable>;
           })}</View>
           <View style={styles.completion}>
             <Text style={styles.summary}>{done} of {facilityTasks.length} {isStaff ? 'assigned tasks' : 'tasks'} completed · all dates</Text>
             <View style={styles.progressTrack} accessible accessibilityRole="progressbar" accessibilityLabel={`${facility.name} task completion, all dates`} accessibilityValue={{ min: 0, max: 100, now: percent }}><View style={[styles.progressFill, { width: `${percent}%` }]} /></View>
           </View>
           <Button label="View facility tasks" variant="secondary" icon="clipboard-outline" onPress={() => router.push({ pathname: '/tasks', params: { facilityId: facility.id } })} />
+          {canEdit ? <Button label="Edit facility & areas" variant="ghost" icon="create-outline" disabled={busy} onPress={() => setEditing(facility)} /> : null}
         </Card>;
-      }) : <EmptyState icon="business-outline" title="No facilities yet" message="Facilities and cleaning areas will appear here when available." />}
-      <Text style={styles.footnote}>Demo facilities are preconfigured for this prototype.</Text>
+      }) : <EmptyState icon="business-outline" title="No facilities yet" message={canEdit ? 'Add your first facility and its cleaning areas to start assigning tasks.' : 'Your admin can add facilities and cleaning areas.'} action={canEdit ? <Button label="Add facility" onPress={addFacility} /> : undefined} />}
+      <Text style={styles.footnote}>{cloud ? 'Archived facilities and areas keep their previous task history.' : 'Demo facilities are preconfigured for this prototype.'}</Text>
+      {editing && cloud ? <FacilityEditor key={editing.id} initial={editing} allowCreateLocation={!cloud.locations.some(location => location.facilityId === editing.id)} createLocationDefault={cloud.workspace.inventoryMode === 'facility'} onSave={async (facility, createLocation) => { await cloud.saveFacility(facility, createLocation); setFeedback('Facility and cleaning areas saved.'); }} onClose={() => setEditing(null)} /> : null}
     </Screen>
   );
 }

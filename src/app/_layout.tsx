@@ -19,7 +19,11 @@ function Routes() {
       <Stack.Protected guard={state.onboardingDone && !!state.session}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="task/[id]" options={{ headerShown: true, title: 'Cleaning task', headerTintColor: colors.navy, headerShadowVisible: false }} />
+        <Stack.Protected guard={state.session?.role === 'admin'}>
+          <Stack.Screen name="team" options={{ headerShown: true, title: 'Team & access', headerTintColor: colors.navy, headerShadowVisible: false }} />
+        </Stack.Protected>
       </Stack.Protected>
+      <Stack.Screen name="auth/callback" />
     </Stack>
   </>;
 }

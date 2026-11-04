@@ -33,10 +33,12 @@ for attempt in {1..30}; do
 done
 
 db < "$repo_root/supabase/tests/bootstrap.sql" > "$result_dir/bootstrap.log" 2>&1
-if ! db < "$repo_root/supabase/migrations/202611040001_shared_workspaces.sql" > "$result_dir/migration.log" 2>&1; then
-  cat "$result_dir/migration.log" >&2
-  exit 1
-fi
+for migration in "$repo_root"/supabase/migrations/*.sql; do
+  if ! db < "$migration" >> "$result_dir/migration.log" 2>&1; then
+    cat "$result_dir/migration.log" >&2
+    exit 1
+  fi
+done
 if ! db < "$repo_root/supabase/tests/shared-workspaces.sql" > "$result_dir/functional.log" 2>&1; then
   tail -80 "$result_dir/functional.log" >&2
   exit 1

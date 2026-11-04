@@ -52,12 +52,13 @@ export function applyAction(state: AppState, action: Action): AppState {
       };
       break;
     }
-    case 'toggleChecklist': {
+    case 'toggleChecklist':
+    case 'setChecklistDone': {
       const task = state.tasks.find((item) => item.id === action.taskId);
       if (!task) throw new Error('This task no longer exists.');
       requireAccess(canUpdateTask(state.session, task), 'You can only update tasks assigned to you.');
       if (!task.checklist.some((item) => item.id === action.itemId)) throw new Error('This checklist item no longer exists.');
-      const checklist = task.checklist.map((item) => item.id === action.itemId ? { ...item, done: !item.done } : item);
+      const checklist = task.checklist.map((item) => item.id === action.itemId ? { ...item, done: action.type === 'setChecklistDone' ? action.done : !item.done } : item);
       const status = task.status === 'completed' && checklist.some((item) => !item.done) ? 'in_progress' : task.status;
       next = {
         ...state,
