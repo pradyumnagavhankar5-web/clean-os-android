@@ -1,0 +1,17 @@
+name: Check shared database permissions
+on:
+  push:
+    branches: ['feature/shared-workspaces']
+    paths: ['supabase/**', 'scripts/test-database.sh', '.github/workflows/shared-database.yml']
+  pull_request:
+    paths: ['supabase/**', 'scripts/test-database.sh', '.github/workflows/shared-database.yml']
+permissions:
+  contents: read
+jobs:
+  database:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test tenant permissions and concurrent stock transactions
+        run: bash scripts/test-database.sh
