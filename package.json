@@ -1,6 +1,6 @@
 {
   "name": "cleanos-android",
-  "version": "1.0.2",
+  "version": "2.0.1",
   "engines": {
     "node": "^22.13.0 || ^24.3.0 || ^26.0.0 || >=27.0.0"
   },
@@ -8,18 +8,22 @@
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
     "@react-native-async-storage/async-storage": "2.2.0",
-    "expo": "~58.0.22",
+    "@supabase/supabase-js": "^2.119.0",
+    "expo": "~58.0.23",
     "expo-constants": "~58.0.14",
+    "expo-crypto": "~58.0.7",
     "expo-font": "~58.0.11",
-    "expo-linking": "~58.0.15",
-    "expo-router": "~58.0.29",
+    "expo-linking": "~58.0.16",
+    "expo-router": "~58.0.30",
+    "expo-secure-store": "~58.0.2",
     "expo-status-bar": "~58.0.4",
     "expo-system-ui": "~58.0.7",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-native": "0.88.1",
-    "react-native-safe-area-context": "~5.10.1",
-    "react-native-screens": "~4.30.1"
+    "react-native-safe-area-context": "~5.11.1",
+    "react-native-screens": "~4.30.1",
+    "react-native-url-polyfill": "^4.0.0"
   },
   "devDependencies": {
     "@expo/ngrok": "^4.1.3",
@@ -36,9 +40,11 @@
     "start:tunnel": "expo start --tunnel ngrok --go",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test src/domain/*.test.ts src/data/*.test.ts src/state/*.test.ts",
+    "test": "tsx --test src/domain/*.test.ts src/data/*.test.ts src/state/*.test.ts src/cloud/*.test.ts src/auth/*.test.ts",
     "check": "npm run lint && npm run typecheck && npm test",
-    "export:android": "expo export --platform android"
+    "export:android": "expo export --platform android",
+    "test:database": "bash scripts/test-database.sh",
+    "start:demo": "EXPO_PUBLIC_CLEANOS_MODE=demo expo start"
   },
   "private": true
 }

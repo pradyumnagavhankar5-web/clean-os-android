@@ -9,7 +9,7 @@ export function getVisibleTasks(state: AppState): Task[] {
 }
 
 export function getLowStockItems(state: AppState): InventoryItem[] {
-  return state.inventory.filter((item) => item.quantity <= item.threshold);
+  return state.inventory.filter((item) => item.active !== false && item.quantity <= item.threshold);
 }
 
 export function dashboardMetrics(state: AppState, now: Date = new Date()) {

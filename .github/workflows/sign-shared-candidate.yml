@@ -1,0 +1,70 @@
+name: Sign CleanOS with the owner key
+
+on:
+  workflow_dispatch:
+    inputs:
+      candidate_tag:
+        description: Successful shared-preview tag to sign (from Releases)
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: cleanos-owner-signing
+  cancel-in-progress: false
+
+jobs:
+  sign:
+    if: github.repository == 'pradyumnagavhankar5-web/clean-os-android' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: 'build-tools;37.0.0'
+          log-accepted-android-sdk-licenses: false
+      - name: Locate a successfully tested candidate
+        id: candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CANDIDATE_TAG: ${{ inputs.candidate_tag }}
+        run: python .github/scripts/resolve-shared-candidate.py "$CANDIDATE_TAG"
+
+      - name: Sign and verify without changing the tested app payload
+        env:
+          CLEANOS_ANDROID_KEYSTORE_BASE64: ${{ secrets.CLEANOS_ANDROID_KEYSTORE_BASE64 }}
+          CLEANOS_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.CLEANOS_ANDROID_KEYSTORE_PASSWORD }}
+          SOURCE_SHA: ${{ steps.candidate.outputs.source }}
+        run: python .github/scripts/sign-android-candidate.py --config candidate/app.json --source-commit "$SOURCE_SHA"
+
+      - name: Publish the owner-signed candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ steps.candidate.outputs.source }}
+          CANDIDATE_TAG: ${{ inputs.candidate_tag }}
+        run: |
+          signed_tag="$(python -c "import json; d=json.load(open('signed/BUILD-INFO.json')); print('shared-signed-v'+d['apks'][0]['version']+'-'+d['source_commit'][:7])")"
+          cat > signed-notes.md <<EOF
+          CleanOS signed with the owner-controlled Aura Builds key.
+
+          Download **CleanOS.apk** for modern Android phones, or **CleanOS-armv7.apk** for older 32-bit devices. Requires Android 7 or newer. APK payloads match the tested candidate ${CANDIDATE_TAG}; only signatures were replaced. Source: ${SOURCE_SHA}.
+
+          A preview installed with the generic Expo certificate must be removed before this differently signed shared candidate can install. Sign in again afterward; shared records remain on Supabase. The separate local demo package does not need removal.
+
+          Complete the hosted setup, real email and two-phone checks before operational rollout. Owner signing alone does not establish those results. Setup: https://github.com/${GITHUB_REPOSITORY}/blob/${SOURCE_SHA}/docs/SUPABASE_SETUP.md
+          EOF
+          gh release create "$signed_tag" signed/CleanOS.apk signed/CleanOS.apk.sha256 \
+            signed/CleanOS-armv7.apk signed/CleanOS-armv7.apk.sha256 \
+            signed/SIGNING-CERTIFICATE-SHA256.txt signed/BUILD-INFO.json \
+            --repo "$GITHUB_REPOSITORY" --target "$SOURCE_SHA" --prerelease \
+            --title "CleanOS owner-signed candidate $signed_tag" --notes-file signed-notes.md
+          printf 'Owner-signed downloads: https://github.com/%s/releases/tag/%s\n' \
+            "$GITHUB_REPOSITORY" "$signed_tag" >> "$GITHUB_STEP_SUMMARY"

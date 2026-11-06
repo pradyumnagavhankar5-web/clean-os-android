@@ -38,6 +38,9 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+__pycache__/
+*.pyc
+.private/
 
 # generated native folders
 /ios

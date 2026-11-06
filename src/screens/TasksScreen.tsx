@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useApp } from '../state/AppProvider';
+import CloudRefreshButton from '../cloud/components/CloudRefreshButton';
 import { canManageTasks, formatDate, getVisibleTasks } from '../domain';
 import { useBusinessDate } from '../state/useBusinessDate';
 import { Button, Card, Chip, EmptyState, Field, Header, Screen, colors } from '../ui';
@@ -35,7 +36,7 @@ export default function TasksScreen() {
 
   return (
     <Screen>
-      <Header eyebrow="DAILY OPERATIONS" title={isStaff ? 'My tasks' : 'Task board'} subtitle={isStaff ? 'Your assignments, checklists and daily progress.' : 'Plan the work. Keep every area on track.'} action={canManageTasks(state.session) ? <Button label="New task" icon="add" onPress={() => setCreating(true)} /> : undefined} />
+      <Header eyebrow="DAILY OPERATIONS" title={isStaff ? 'My tasks' : 'Task board'} subtitle={isStaff ? 'Your assignments, checklists and daily progress.' : 'Plan the work. Keep every area on track.'} action={<View style={styles.row}><CloudRefreshButton />{canManageTasks(state.session) ? <Button label="New task" icon="add" onPress={() => setCreating(true)} /> : null}</View>} />
       <Card style={styles.filterCard}>
         <Field label="Search tasks" value={search} onChangeText={setSearch} placeholder="Task, facility, area or team member" />
         {facilityId || areaId ? <View style={styles.row}><Chip label={state.facilities.find((facility) => facility.id === facilityId)?.name ?? 'Area filter'} selected /><Button label="Clear area filter" variant="ghost" onPress={() => router.setParams({ facilityId: undefined, areaId: undefined })} /></View> : null}

@@ -11,6 +11,7 @@ import {
   TextInput,
   View,
   type KeyboardTypeOptions,
+  type TextInputProps,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
@@ -152,6 +153,7 @@ export function Chip({ label, selected = false, onPress, tone = 'neutral' }: {
 export function Field({
   label, value, onChangeText, placeholder, keyboardType = 'default',
   multiline = false, error, secureTextEntry = false, editable = true,
+  autoCapitalize = 'sentences', autoCorrect = true,
 }: {
   label: string;
   value: string;
@@ -162,6 +164,8 @@ export function Field({
   error?: string;
   secureTextEntry?: boolean;
   editable?: boolean;
+  autoCapitalize?: TextInputProps['autoCapitalize'];
+  autoCorrect?: boolean;
 }) {
   const [focused, setFocused] = useState(false);
   return (
@@ -178,6 +182,8 @@ export function Field({
         multiline={multiline}
         secureTextEntry={secureTextEntry}
         editable={editable}
+        autoCapitalize={autoCapitalize}
+        autoCorrect={autoCorrect}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         style={[

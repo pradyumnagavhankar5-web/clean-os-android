@@ -1,9 +1,9 @@
-name: Build Android preview APK
+name: Build CleanOS shared Android candidate
 
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, 'feature/shared-workspaces']
     paths:
       - 'src/**'
       - 'assets/**'
@@ -16,6 +16,8 @@ on:
       - 'tsconfig.json'
       - '.github/workflows/android-preview.yml'
       - '.github/scripts/verify-preview-apks.py'
+      - '.github/scripts/check-shared-launch.sh'
+      - 'supabase/**'
 
 permissions:
   contents: read
@@ -26,7 +28,7 @@ concurrency:
 
 jobs:
   build:
-    if: github.repository == 'pradyumnagavhankar5-web/clean-os-android' && github.ref == 'refs/heads/main'
+    if: github.repository == 'pradyumnagavhankar5-web/clean-os-android' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feature/shared-workspaces')
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
@@ -108,7 +110,7 @@ jobs:
             -Pandroid.cmakeVersion=3.30.5 \
             -PreactNativeArchitectures=arm64-v8a
           mkdir -p ../artifacts
-          cp app/build/outputs/apk/release/app-release.apk ../artifacts/CleanOS-preview.apk
+          cp app/build/outputs/apk/release/app-release.apk ../artifacts/CleanOS-team-preview.apk
 
       - name: Build the older-device compatibility APK
         working-directory: android
@@ -118,12 +120,21 @@ jobs:
             -Dorg.gradle.jvmargs='-Xmx4096m -XX:MaxMetaspaceSize=1024m -Dfile.encoding=UTF-8' \
             -Pandroid.cmakeVersion=3.30.5 \
             -PreactNativeArchitectures=armeabi-v7a
-          cp app/build/outputs/apk/release/app-release.apk ../artifacts/CleanOS-preview-armv7.apk
+          cp app/build/outputs/apk/release/app-release.apk ../artifacts/CleanOS-team-preview-armv7.apk
 
-      - name: Verify and package both APKs
+      - name: Build the emulator installation test
+        working-directory: android
+        run: |
+          ./gradlew :app:assembleRelease --no-daemon --max-workers=2 \
+            -Dorg.gradle.jvmargs='-Xmx4096m -XX:MaxMetaspaceSize=1024m -Dfile.encoding=UTF-8' \
+            -Pandroid.cmakeVersion=3.30.5 \
+            -PreactNativeArchitectures=x86_64
+          cp app/build/outputs/apk/release/app-release.apk ../artifacts/CleanOS-emulator.apk
+
+      - name: Verify and package APKs
         run: |
           build_tools="${ANDROID_HOME}/build-tools/37.0.0"
-          for filename in CleanOS-preview.apk CleanOS-preview-armv7.apk; do
+          for filename in CleanOS-team-preview.apk CleanOS-team-preview-armv7.apk CleanOS-emulator.apk; do
             apk="artifacts/$filename"
             prefix="${filename%.apk}"
             "$build_tools/apksigner" verify --verbose --print-certs "$apk" \
@@ -136,8 +147,9 @@ jobs:
           python .github/scripts/verify-preview-apks.py
           (
             cd artifacts
-            sha256sum CleanOS-preview.apk > CleanOS-preview.apk.sha256
-            sha256sum CleanOS-preview-armv7.apk > CleanOS-preview-armv7.apk.sha256
+            sha256sum CleanOS-team-preview.apk > CleanOS-team-preview.apk.sha256
+            sha256sum CleanOS-team-preview-armv7.apk > CleanOS-team-preview-armv7.apk.sha256
+            sha256sum CleanOS-emulator.apk > CleanOS-emulator.apk.sha256
           )
 
       - name: Save verified APK and build evidence
@@ -148,8 +160,55 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-  publish:
+  database:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test database permissions and concurrent stock transactions
+        run: bash scripts/test-database.sh
+
+  emulator:
     needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: cleanos-android-preview-${{ github.run_number }}-${{ github.run_attempt }}
+          path: artifacts
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Enable emulator acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Install and launch the real-account app on Android 16
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          force-avd-creation: true
+          emulator-boot-timeout: 600
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          script: bash .github/scripts/check-shared-launch.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cleanos-shared-launch-${{ github.run_id }}
+          path: emulator-evidence/
+          retention-days: 14
+          if-no-files-found: warn
+
+  publish:
+    needs: [build, database, emulator]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -167,35 +226,35 @@ jobs:
         run: |
           (
             cd artifacts
-            sha256sum --check CleanOS-preview.apk.sha256
-            sha256sum --check CleanOS-preview-armv7.apk.sha256
+            sha256sum --check CleanOS-team-preview.apk.sha256
+            sha256sum --check CleanOS-team-preview-armv7.apk.sha256
           )
-          preview_tag="android-preview-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}-${GITHUB_SHA:0:7}"
+          preview_tag="shared-preview-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}-${GITHUB_SHA:0:7}"
           cat > release-notes.md <<EOF
           ## Choose one CleanOS download
 
-          - **Recommended: CleanOS-preview.apk** — the smaller build for most current Android phones and tablets.
-          - **Older-device compatibility: CleanOS-preview-armv7.apk** — try this if your older Android device cannot install the recommended download.
+          - **Recommended: CleanOS-team-preview.apk** — the smaller build for most current Android phones and tablets.
+          - **Older-device compatibility: CleanOS-team-preview-armv7.apk** — try this if your older Android device cannot install the recommended download.
 
-          These are two variants of the same CleanOS version. Both require Android 7 or newer and include the app's JavaScript. Expo Go, an Expo account, a development server and a backend connection are not needed to use the local demo.
+          These are two variants of the same shared CleanOS app. Both require Android 7 or newer. Real sign-in and a configured Supabase database are required. Install this alongside the earlier demo; it uses a separate Android package and starts with your real account.
 
           Download the file you need, then open it on your phone. Android may ask you to allow installation from the browser. Each APK has its own SHA-256 checksum file.
 
-          Both APKs use the same Expo template generic debug signing key and are intended for preview testing. They are not Play Store production releases.
+          Both APKs use the Expo template generic debug signing key for acceptance testing. Owner-controlled signing and the shared release checklist are required before production distribution. Setup: https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_SHA}/docs/SUPABASE_SETUP.md
 
           Source commit: ${GITHUB_SHA}
-          Automated checks and each APK's signature, package, version, single architecture, embedded JavaScript and ZIP alignment were verified. The recommended APK's ARM64 native libraries also passed ELF PT_LOAD alignment checks for 16 KiB pages. Physical Android device testing has not been performed by this workflow.
+          Automated checks, database permissions/concurrency tests, APK signature/architecture/16 KiB alignment, and an Android 16 x86_64 emulator install/real-sign-in-screen test passed. ARM phone installation and real account/multiple-phone acceptance tests must still be performed; this workflow does not sign in, register users or send email.
           EOF
           gh release create "$preview_tag" \
-            artifacts/CleanOS-preview.apk \
-            artifacts/CleanOS-preview.apk.sha256 \
-            artifacts/CleanOS-preview-armv7.apk \
-            artifacts/CleanOS-preview-armv7.apk.sha256 \
+            artifacts/CleanOS-team-preview.apk \
+            artifacts/CleanOS-team-preview.apk.sha256 \
+            artifacts/CleanOS-team-preview-armv7.apk \
+            artifacts/CleanOS-team-preview-armv7.apk.sha256 \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
-            --title "CleanOS Android preview ${preview_tag}" \
+            --title "CleanOS shared workspace candidate ${preview_tag}" \
             --prerelease \
             --notes-file release-notes.md
           download_base="https://github.com/${GITHUB_REPOSITORY}/releases/download/${preview_tag}"
-          printf '### CleanOS Android preview\n\n[Recommended APK for modern phones](%s/CleanOS-preview.apk)\n\n[Older-device compatibility APK](%s/CleanOS-preview-armv7.apk)\n\nSource commit: %s\n' \
+          printf '### CleanOS Android preview\n\n[Recommended APK for modern phones](%s/CleanOS-team-preview.apk)\n\n[Older-device compatibility APK](%s/CleanOS-team-preview-armv7.apk)\n\nSource commit: %s\n' \
             "$download_base" "$download_base" "$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
