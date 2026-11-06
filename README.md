@@ -10,8 +10,8 @@ multiple-phone acceptance checks are complete. The earlier demo remains availabl
 
 1. Complete the [Supabase setup guide](docs/SUPABASE_SETUP.md), including both SQL
    migrations, confirmed email sign-in and the `cleanos-team://auth/callback` redirect.
-2. [Download the shared CleanOS APK (31 MB)](https://github.com/pradyumnagavhankar5-web/clean-os-android/releases/download/shared-preview-6-1-11f6b0f/CleanOS-team-preview.apk)
-   for modern Android phones. The [24 MB compatibility APK](https://github.com/pradyumnagavhankar5-web/clean-os-android/releases/download/shared-preview-6-1-11f6b0f/CleanOS-team-preview-armv7.apk)
+2. [Download the shared CleanOS APK (31 MB)](https://github.com/pradyumnagavhankar5-web/clean-os-android/releases/download/shared-preview-7-1-6779dcc/CleanOS-team-preview.apk)
+   for modern Android phones. The [24 MB compatibility APK](https://github.com/pradyumnagavhankar5-web/clean-os-android/releases/download/shared-preview-7-1-6779dcc/CleanOS-team-preview-armv7.apk)
    supports older 32-bit devices. The build, database tests and Android 16 emulator
    installation/sign-in-screen/callback checks passed for this candidate.
 3. Create and confirm your account, then create an empty workspace or join using

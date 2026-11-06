@@ -38,7 +38,9 @@ Do this after the shared candidate passes its hosted and two-phone checks.
    Keep them in GitHub secrets. They are not `EXPO_PUBLIC_` app settings. This
    setup does not need an Expo account, service-role key or database password.
 
-4. Once this workflow is present on `main`, open **Actions → Sign CleanOS with
+4. After the shared changes are reviewed and merged from
+   [pull request #1](https://github.com/pradyumnagavhankar5-web/clean-os-android/pull/1)
+   into `main`, open **Actions → Sign CleanOS with
    the owner key → Run workflow**. Choose `main` and enter the complete successful
    `shared-preview-…` tag from **Releases**. Run it once.
 

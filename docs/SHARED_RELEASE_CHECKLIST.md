@@ -4,22 +4,22 @@ Record evidence for the exact source commit, APK and Supabase migration used.
 Unchecked items are work to verify, not claims that tests have passed. Earlier
 demo acceptance and emulator checks do not verify this shared-workspace release.
 
-Candidate source: `11f6b0fe3addb5601bb87fb72b6da62dd4cbf194`
+Candidate source: `6779dccdd412c58375ece8b64f81b5c87a531ce4`
 
 Migrations: `202611040001_shared_workspaces.sql` and `202611040002_consistent_reads.sql`
 
 | Candidate evidence | Recorded value |
 |---|---|
-| Release | `shared-preview-6-1-11f6b0f` |
-| Version / Android code | `2.0.0` / `1` |
-| ARM64 APK bytes | `30,919,969` |
-| ARM64 APK SHA-256 | `95398a5dbf06bd1aa8afff18bf3994d4304f68e0e5d2caf8e1abcc5f1203b2c4` |
-| ARMv7 APK SHA-256 | `810c7a03d762bfb6576f5f6a99230452959f2cb4ea028e0d44baf7542177b12b` |
+| Release | `shared-preview-7-1-6779dcc` |
+| Version / Android code | `2.0.1` / `2` |
+| ARM64 APK bytes | `30,919,973` |
+| ARM64 APK SHA-256 | `be16fe16a48f259d17a2a1f39d8e417d4a2afdd69d750af47a85b6b6486d003d` |
+| ARMv7 APK SHA-256 | `e4fee7df47a5811cdaa4569b7d4d4eb98478bee000aa8a97b73f1609cc4eb5b1` |
 | Preview certificate SHA-256 | `fac61745dc0903786fb9ede62a962b399f7348f0bb6f899b8332667591033b9c` |
-| Automated installation | Android 16, x86_64 emulator; 4 November 2026 |
+| Automated installation | Android 16, x86_64 emulator; 6 November 2026 |
 | Physical test date / tester / devices | Pending |
 
-[Successful Android pipeline](https://github.com/pradyumnagavhankar5-web/clean-os-android/actions/runs/41858107249).
+[Successful Android pipeline](https://github.com/pradyumnagavhankar5-web/clean-os-android/actions/runs/42179926588).
 The preview key above is public; owner signing remains a separate release step.
 
 ## Database and access control
@@ -138,12 +138,16 @@ The preview key above is public; owner signing remains a separate release step.
 - The emulator displayed real account sign-in and account creation. A registered
   invalid email callback safely returned to sign-in with its recovery message.
   This test did not create an account or send email.
+- The final emulator screenshot confirms dark, readable status-bar icons on the
+  light sign-in screen.
 - Both published phone APKs match the original immutable Actions artifact
-  `13341375241`. Its archive SHA-256 is
-  `f4596e5a6811bbb2991fddf879b451886f509a9b3ecbb5cfd29b9f52af60b232`.
+  `13486030971`. Its archive SHA-256 is
+  `b73a0bbe070f3d035c40d354af4d0059e5363f90021a1b5c47fb4dde5dd83370`.
 - The actual PostgreSQL workspace responses also passed the client's decoder for
   admin, supervisor, staff and an empty workspace in the isolated test database.
 - The private signing tools passed local signature/payload verification with a
   temporary test identity. No owner production key was generated or published.
 - Hosted schema deployment remains unverified: the project's read-only schema
   endpoint still returned missing-function `PGRST202` on 6 November 2026.
+- Six release-provenance tests passed, covering exact run/attempt binding,
+  manual builds, forks, failed attempts, expired artifacts and digest metadata.

@@ -13,8 +13,13 @@ database permissions. Keep database passwords, SMTP passwords, secret keys and
 `service_role` keys private; they must never be placed in the Android app.
 
 The steps below still require the project owner to configure the dashboard.
+You can also add the Supabase integration in ChatGPT and authorize the intended
+project so Codex can apply the reviewed database migrations. A public app key
+does not provide that administrative connection. The manual steps below remain
+available if you prefer using the dashboard.
+
 Providing a publishable key does not grant the app or Codex permission to create
-database tables. [Download the shared-workspace APK](https://github.com/pradyumnagavhankar5-web/clean-os-android/releases/download/shared-preview-6-1-11f6b0f/CleanOS-team-preview.apk);
+database tables. [Download the shared-workspace APK](https://github.com/pradyumnagavhankar5-web/clean-os-android/releases/download/shared-preview-7-1-6779dcc/CleanOS-team-preview.apk);
 the earlier demo APKs store sample data locally.
 
 1. **Open the project and install the database schema.**
@@ -94,6 +99,11 @@ the earlier demo APKs store sample data locally.
    account**. Enter your own email and password. When **Check your email** appears,
    open the confirmation message on that same Android device, then return to the
    app and sign in.
+
+   After installation, tap **Open** in Android's installer to launch the new app.
+   If the old demo remains installed, you may see two CleanOS icons. The shared
+   version opens real **Sign in / Create account**; the older demo offers sample
+   roles. Your demo and its local records can remain installed separately.
 
    On **Choose your workspace**, select **Create workspace**. Enter the workspace
    name, such as **Aura Tradings**, and your name. Choose the inventory arrangement
