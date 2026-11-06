@@ -10,9 +10,10 @@ multiple-phone acceptance checks are complete. The earlier demo remains availabl
 
 1. Complete the [Supabase setup guide](docs/SUPABASE_SETUP.md), including both SQL
    migrations, confirmed email sign-in and the `cleanos-team://auth/callback` redirect.
-2. Install the shared-workspace APK from its GitHub prerelease when the Android
-   pipeline passes. The ordinary `CleanOS-team-preview.apk` is for modern Android
-   phones; the armv7 download supports older 32-bit devices.
+2. [Download the shared CleanOS APK (31 MB)](https://github.com/pradyumnagavhankar5-web/clean-os-android/releases/download/shared-preview-6-1-11f6b0f/CleanOS-team-preview.apk)
+   for modern Android phones. The [24 MB compatibility APK](https://github.com/pradyumnagavhankar5-web/clean-os-android/releases/download/shared-preview-6-1-11f6b0f/CleanOS-team-preview-armv7.apk)
+   supports older 32-bit devices. The build, database tests and Android 16 emulator
+   installation/sign-in-screen/callback checks passed for this candidate.
 3. Create and confirm your account, then create an empty workspace or join using
    the code issued by your administrator. Real workspaces contain no sample data.
 4. Add facilities, cleaning areas and products. Invite staff using their actual
@@ -84,6 +85,10 @@ It verifies signatures, package/version, exact architecture, bundled JavaScript,
 ZIP alignment and ARM64 ELF alignment, then checks a fresh Android 16 emulator
 launch before publishing phone downloads. Preview-template signing is not a
 production signing identity.
+
+The [private signing guide](docs/ANDROID_SIGNING.md) prepares an owner-controlled
+key and a manual GitHub workflow that signs an already tested candidate without
+rebuilding or changing its app payload. No owner key has been generated yet.
 
 Follow the [shared release checklist](docs/SHARED_RELEASE_CHECKLIST.md) before
 operational distribution. Free Supabase capacity, inactivity and backup limits

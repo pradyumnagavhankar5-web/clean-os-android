@@ -14,8 +14,8 @@ database permissions. Keep database passwords, SMTP passwords, secret keys and
 
 The steps below still require the project owner to configure the dashboard.
 Providing a publishable key does not grant the app or Codex permission to create
-database tables. Use the shared-workspace APK when supplied; the earlier demo
-APKs store sample data locally.
+database tables. [Download the shared-workspace APK](https://github.com/pradyumnagavhankar5-web/clean-os-android/releases/download/shared-preview-6-1-11f6b0f/CleanOS-team-preview.apk);
+the earlier demo APKs store sample data locally.
 
 1. **Open the project and install the database schema.**
 

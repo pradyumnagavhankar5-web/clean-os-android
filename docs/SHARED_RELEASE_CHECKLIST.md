@@ -4,17 +4,28 @@ Record evidence for the exact source commit, APK and Supabase migration used.
 Unchecked items are work to verify, not claims that tests have passed. Earlier
 demo acceptance and emulator checks do not verify this shared-workspace release.
 
-Source commit: __________  
-Migration: `202611040001_shared_workspaces.sql`  
-APK version / Android version code: __________  
-APK SHA-256 / signing certificate SHA-256: __________  
-Test date (India time): __________  
-Tester / device models / Android versions: __________
+Candidate source: `11f6b0fe3addb5601bb87fb72b6da62dd4cbf194`
+
+Migrations: `202611040001_shared_workspaces.sql` and `202611040002_consistent_reads.sql`
+
+| Candidate evidence | Recorded value |
+|---|---|
+| Release | `shared-preview-6-1-11f6b0f` |
+| Version / Android code | `2.0.0` / `1` |
+| ARM64 APK bytes | `30,919,969` |
+| ARM64 APK SHA-256 | `95398a5dbf06bd1aa8afff18bf3994d4304f68e0e5d2caf8e1abcc5f1203b2c4` |
+| ARMv7 APK SHA-256 | `810c7a03d762bfb6576f5f6a99230452959f2cb4ea028e0d44baf7542177b12b` |
+| Preview certificate SHA-256 | `fac61745dc0903786fb9ede62a962b399f7348f0bb6f899b8332667591033b9c` |
+| Automated installation | Android 16, x86_64 emulator; 4 November 2026 |
+| Physical test date / tester / devices | Pending |
+
+[Successful Android pipeline](https://github.com/pradyumnagavhankar5-web/clean-os-android/actions/runs/41858107249).
+The preview key above is public; owner signing remains a separate release step.
 
 ## Database and access control
 
-- [ ] Apply the complete migration to the intended project and confirm schema
-  version `1`. Record the test database version and command/output for automated
+- [ ] Apply both migrations to the intended project and confirm schema
+  version `2`. Record the test database version and command/output for automated
   database tests.
 - [ ] Unauthenticated requests cannot read business rows or perform mutations.
 - [ ] A member of one workspace cannot read, reference or change another
@@ -119,3 +130,20 @@ Tester / device models / Android versions: __________
 - Android JavaScript export passed with Expo SDK 58.
 - Hosted SQL deployment, real email delivery, owner signing and real-phone
   acceptance are not established by these local checks.
+
+## Build evidence — 6 November 2026
+
+- The candidate's GitHub build, database, Android 16 emulator and publication jobs
+  all passed. Fresh installation returned `Success`; launch returned `Status: ok`.
+- The emulator displayed real account sign-in and account creation. A registered
+  invalid email callback safely returned to sign-in with its recovery message.
+  This test did not create an account or send email.
+- Both published phone APKs match the original immutable Actions artifact
+  `13341375241`. Its archive SHA-256 is
+  `f4596e5a6811bbb2991fddf879b451886f509a9b3ecbb5cfd29b9f52af60b232`.
+- The actual PostgreSQL workspace responses also passed the client's decoder for
+  admin, supervisor, staff and an empty workspace in the isolated test database.
+- The private signing tools passed local signature/payload verification with a
+  temporary test identity. No owner production key was generated or published.
+- Hosted schema deployment remains unverified: the project's read-only schema
+  endpoint still returned missing-function `PGRST202` on 6 November 2026.

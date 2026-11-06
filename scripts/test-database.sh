@@ -15,7 +15,7 @@ cleanup() {
   if [[ "${CLEANOS_TEST_KEEP_CONTAINER:-0}" == 1 ]]; then
     printf 'Retained test container: %s\n' "$container_name"
   else
-    docker_local rm -f "$container_name" >/dev/null 2>&1 || true
+    docker_local rm -fv "$container_name" >/dev/null 2>&1 || true
   fi
   printf 'Database test logs: %s\n' "$result_dir"
   exit "$result"
